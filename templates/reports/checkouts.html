@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Relatório de Check-outs{% endblock %}
+
+{% block content %}
+<div class="report-detail">
+    <div class="report-header">
+        <h2>Relatório de Check-outs</h2>
+        <p>Período: {{ start_date|date:"d/m/Y" }} - {{ end_date|date:"d/m/Y" }}</p>
+    </div>
+
+    <div class="report-content">
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Data/Hora</th>
+                    <th>Hóspede</th>
+                    <th>Quarto</th>
+                    <th>Diárias</th>
+                    <th>Valor Total</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for checkout in checkouts %}
+                <tr>
+                    <td>{{ checkout.date|date:"d/m/Y H:i" }}</td>
+                    <td>{{ checkout.reservation.guest_name }}</td>
+                    <td>{{ checkout.reservation.room.number }}</td>
+                    <td>{{ checkout.reservation.nights }}</td>
+                    <td>R$ {{ checkout.reservation.total_amount|floatformat:2 }}</td>
+                    <td>
+                        <span class="status-badge status-{% if checkout.payment_confirmed %}success{% else %}pending{% endif %}">
+                            {% if checkout.payment_confirmed %}Pago{% else %}Pendente{% endif %}
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6">Nenhum check-out encontrado no período.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="report-summary">
+        <div class="summary-card">
+            <h3>Total de Check-outs</h3>
+            <div class="summary-value">{{ checkouts|length }}</div>
+        </div>
+    </div>
+
+    <div class="report-actions">
+        <button onclick="window.print()" class="btn">Imprimir Relatório</button>
+        <a href="{% url 'reports:list' %}" class="btn btn-secondary">Voltar</a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+[project]
+name = "hotel-hms"
+version = "0.1.0"
+description = "Hotel Management System"
+dependencies = [
+    "django>=5.0.0",
+    "pytest>=8.3.5",
+    "pytest-django>=4.11.1"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "hotel_hms.settings"
+python_files = ["test_*.py", "*_test.py", "tests.py"]

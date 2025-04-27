@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Sistema de Gerenciamento Hoteleiro{% endblock %}
+
+{% block content %}
+<div class="home-dashboard">
+    <h2>Bem-vindo ao Sistema de Gerenciamento Hoteleiro</h2>
+    
+    <div class="stats-overview">
+        <div class="stat-card">
+            <h3>Ocupação Atual</h3>
+            <div class="stat-value">{{ occupancy_rate }}%</div>
+            <div class="stat-details">
+                <span>{{ occupied_rooms }} quartos ocupados</span>
+                <span>{{ available_rooms }} quartos disponíveis</span>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <h3>Check-ins Hoje</h3>
+            <div class="stat-value">{{ todays_checkins }}</div>
+            <div class="stat-details">
+                <span>{{ completed_checkins }} realizados</span>
+                <span>{{ pending_checkins }} pendentes</span>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <h3>Check-outs Hoje</h3>
+            <div class="stat-value">{{ todays_checkouts }}</div>
+            <div class="stat-details">
+                <span>{{ completed_checkouts }} realizados</span>
+                <span>{{ pending_checkouts }} pendentes</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-sections">
+        <section class="recent-activity">
+            <h3>Atividades Recentes</h3>
+            <div class="activity-list">
+                {% for activity in recent_activities %}
+                <div class="activity-item">
+                    <span class="activity-time">{{ activity.timestamp|date:"H:i" }}</span>
+                    <span class="activity-description">{{ activity.description }}</span>
+                </div>
+                {% empty %}
+                <p>Nenhuma atividade recente.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="quick-actions">
+            <h3>Ações Rápidas</h3>
+            <div class="action-grid">
+                <a href="{% url 'reservation-list' %}" class="action-card">
+                    <i class="fas fa-calendar-plus"></i>
+                    <span>Nova Reserva</span>
+                </a>
+                <a href="{% url 'room-list' %}" class="action-card">
+                    <i class="fas fa-bed"></i>
+                    <span>Status dos Quartos</span>
+                </a>
+                <a href="#" class="action-card" onclick="openCheckInModal()">
+                    <i class="fas fa-sign-in-alt"></i>
+                    <span>Check-in</span>
+                </a>
+                <a href="#" class="action-card" onclick="openCheckOutModal()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Check-out</span>
+                </a>
+            </div>
+        </section>
+    </div>
+
+    <!-- Modal de Check-in -->
+    <div id="checkInModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('checkInModal')">&times;</button>
+            <h3>Realizar Check-in</h3>
+            <div class="checkin-list">
+                {% for reservation in pending_checkins_list %}
+                <div class="checkin-item">
+                    <span>{{ reservation.guest_name }} - Quarto {{ reservation.room.number }}</span>
+                    <button onclick="doCheckIn({{ reservation.id }})">Fazer Check-in</button>
+                </div>
+                {% empty %}
+                <p>Não há check-ins pendentes.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Check-out -->
+    <div id="checkOutModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('checkOutModal')">&times;</button>
+            <h3>Realizar Check-out</h3>
+            <div class="checkout-list">
+                {% for reservation in pending_checkouts_list %}
+                <div class="checkout-item">
+                    <span>{{ reservation.guest_name }} - Quarto {{ reservation.room.number }}</span>
+                    <button onclick="doCheckOut({{ reservation.id }})">Fazer Check-out</button>
+                </div>
+                {% empty %}
+                <p>Não há check-outs pendentes.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Atualiza as estatísticas a cada 5 minutos
+    setInterval(updateStats, 300000);
+});
+
+async function updateStats() {
+    try {
+        const response = await fetch('/api/dashboard/stats/');
+        const data = await response.json();
+        
+        // Atualiza os valores no dashboard
+        document.querySelector('.stat-card:nth-child(1) .stat-value').textContent = data.occupancy_rate + '%';
+        document.querySelector('.stat-card:nth-child(2) .stat-value').textContent = data.todays_checkins;
+        document.querySelector('.stat-card:nth-child(3) .stat-value').textContent = data.todays_checkouts;
+        
+        // Atualiza outros detalhes
+        updateStatDetails(data);
+    } catch (error) {
+        console.error('Erro ao atualizar estatísticas:', error);
+    }
+}
+
+function updateStatDetails(data) {
+    const detailsElements = document.querySelectorAll('.stat-details span');
+    detailsElements[0].textContent = `${data.occupied_rooms} quartos ocupados`;
+    detailsElements[1].textContent = `${data.available_rooms} quartos disponíveis`;
+    detailsElements[2].textContent = `${data.completed_checkins} realizados`;
+    detailsElements[3].textContent = `${data.pending_checkins} pendentes`;
+    detailsElements[4].textContent = `${data.completed_checkouts} realizados`;
+    detailsElements[5].textContent = `${data.pending_checkouts} pendentes`;
+}
+
+function openCheckInModal() {
+    document.getElementById('checkInModal').style.display = 'flex';
+}
+
+function openCheckOutModal() {
+    document.getElementById('checkOutModal').style.display = 'flex';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+</script>
+{% endblock %}

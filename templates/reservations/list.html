@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}Reservas{% endblock %}
+
+{% block content %}
+<div class="reservations-container">
+    <h2>Gerenciamento de Reservas</h2>
+    
+    <div class="reservation-filters">
+        <input type="date" id="date-filter" placeholder="Data">
+        <select id="status-filter">
+            <option value="">Todos os Status</option>
+            <option value="pending">Pendente</option>
+            <option value="confirmed">Confirmada</option>
+            <option value="cancelled">Cancelada</option>
+        </select>
+        <input type="text" id="guest-filter" placeholder="Buscar por hóspede">
+    </div>
+
+    <table class="reservations-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Hóspede</th>
+                <th>Quarto</th>
+                <th>Check-in</th>
+                <th>Check-out</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for reservation in reservations %}
+            <tr>
+                <td>{{ reservation.id }}</td>
+                <td>{{ reservation.guest_name }}</td>
+                <td>{{ reservation.room.number }}</td>
+                <td>{{ reservation.check_in_date }}</td>
+                <td>{{ reservation.check_out_date }}</td>
+                <td>{{ reservation.get_status_display }}</td>
+                <td>
+                    <button onclick="editReservation({{ reservation.id }})">Editar</button>
+                    <button onclick="changeStatus({{ reservation.id }})">Mudar Status</button>
+                    {% if reservation.status == 'pending' %}
+                        <button onclick="doCheckIn({{ reservation.id }})">Check-in</button>
+                    {% elif reservation.status == 'confirmed' %}
+                        <button onclick="doCheckOut({{ reservation.id }})">Check-out</button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7">Nenhuma reserva encontrada.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <button class="add-reservation-btn" onclick="openAddReservationModal()">Nova Reserva</button>
+</div>
+
+<!-- Modal de Nova Reserva (será implementado com JavaScript) -->
+<div id="reservationModal" class="modal" style="display: none;">
+    <!-- Conteúdo do modal será adicionado via JavaScript -->
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/reservations.js"></script>
+{% endblock %}

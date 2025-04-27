@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Hotel Management System{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/styles.css">
+    {% csrf_token %}
+</head>
+<body>
+    <header>
+        <h1>Sistema de Gerenciamento Hoteleiro</h1>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="{% url 'reservation-list' %}">Reservas</a></li>
+                <li><a href="{% url 'room-list' %}">Quartos</a></li>
+                <li><a href="{% url 'reports:list' %}">Relatórios</a></li>
+                <li><a href="{% url 'admin-dashboard' %}">Administração</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="notification {{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Sistema de Gerenciamento Hoteleiro</p>
+    </footer>
+
+    <!-- Scripts base -->
+    <script src="/static/js/main.js"></script>
+    
+    <!-- Scripts específicos de página -->
+    {% block scripts %}{% endblock %}
+</body>
+</html>

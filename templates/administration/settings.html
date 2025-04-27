@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Configurações do Sistema{% endblock %}
+
+{% block content %}
+<div class="settings-page">
+    <h2>Configurações do Sistema</h2>
+    
+    <form method="POST" class="settings-form">
+        {% csrf_token %}
+        
+        <div class="settings-section">
+            <h3>Configurações Gerais</h3>
+            {% for setting in settings %}
+            <div class="form-group">
+                <label for="{{ setting.key }}">{{ setting.key }}</label>
+                <input type="text" id="{{ setting.key }}" name="{{ setting.key }}" 
+                       value="{{ setting.value }}" class="form-control">
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="settings-section">
+            <h3>Adicionar Nova Configuração</h3>
+            <div class="form-group">
+                <label for="new_key">Chave</label>
+                <input type="text" id="new_key" name="new_key" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="new_value">Valor</label>
+                <input type="text" id="new_value" name="new_value" class="form-control">
+            </div>
+            <button type="button" onclick="addSetting()" class="btn btn-secondary">
+                Adicionar Configuração
+            </button>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+            <button type="reset" class="btn btn-secondary">Resetar</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function addSetting() {
+    const key = document.getElementById('new_key').value;
+    const value = document.getElementById('new_value').value;
+    
+    if (!key || !value) {
+        showNotification('Chave e valor são obrigatórios', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/admin/settings/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({ key, value })
+        });
+        
+        if (response.ok) {
+            showNotification('Configuração adicionada com sucesso', 'success');
+            location.reload();
+        } else {
+            throw new Error('Erro ao adicionar configuração');
+        }
+    } catch (error) {
+        showNotification(error.message, 'error');
+    }
+}
+</script>
+{% endblock %}

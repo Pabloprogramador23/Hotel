@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Relatórios{% endblock %}
+
+{% block content %}
+<div class="reports-page">
+    <h2>Relatórios</h2>
+    
+    <div class="report-filters">
+        <form id="report-form" class="report-form">
+            <div class="form-group">
+                <label for="report_type">Tipo de Relatório</label>
+                <select id="report_type" name="report_type" required>
+                    <option value="">Selecione um relatório</option>
+                    {% for report in report_types %}
+                    <option value="{{ report.id }}">{{ report.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="start_date">Data Inicial</label>
+                <input type="date" id="start_date" name="start_date" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="end_date">Data Final</label>
+                <input type="date" id="end_date" name="end_date" required>
+            </div>
+            
+            <button type="submit" class="btn">Gerar Relatório</button>
+        </form>
+    </div>
+
+    <div class="report-cards">
+        {% for report in report_types %}
+        <div class="report-card" onclick="selectReport('{{ report.id }}')">
+            <h3>{{ report.name }}</h3>
+            <p>{{ report.description }}</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('report-form');
+    
+    // Define datas padrão (últimos 30 dias)
+    const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    
+    document.getElementById('end_date').value = today.toISOString().split('T')[0];
+    document.getElementById('start_date').value = thirtyDaysAgo.toISOString().split('T')[0];
+    
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const reportType = document.getElementById('report_type').value;
+        const startDate = document.getElementById('start_date').value;
+        const endDate = document.getElementById('end_date').value;
+        
+        if (!reportType) {
+            showNotification('Selecione um tipo de relatório', 'error');
+            return;
+        }
+        
+        window.location.href = `/reports/generate/${reportType}/?start_date=${startDate}&end_date=${endDate}`;
+    });
+});
+
+function selectReport(reportId) {
+    document.getElementById('report_type').value = reportId;
+    document.getElementById('report-form').scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+{% endblock %}

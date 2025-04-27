@@ -1,0 +1,39 @@
+{% extends 'reports/base_reports.html' %}
+
+{% block report_content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Check-ins Report</h2>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Check-in Time</th>
+                        <th>Guest</th>
+                        <th>Room</th>
+                        <th>Documents</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for checkin in checkins %}
+                    <tr>
+                        <td>{{ checkin.check_in_time }}</td>
+                        <td>{{ checkin.reservation.guest_name }}</td>
+                        <td>{{ checkin.reservation.room.number }}</td>
+                        <td>
+                            {% if checkin.document_scanned %}
+                                <span class="badge bg-success">Scanned</span>
+                            {% else %}
+                                <span class="badge bg-warning">Pending</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

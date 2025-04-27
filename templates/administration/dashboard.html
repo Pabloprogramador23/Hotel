@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard Administrativo{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <h2>Dashboard Administrativo</h2>
+    
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <h3>Ocupação</h3>
+            <div class="stats">
+                <p>Taxa de Ocupação: {{ occupancy_rate }}%</p>
+                <p>Quartos Ocupados: {{ occupied_rooms }}/{{ total_rooms }}</p>
+            </div>
+        </div>
+        
+        <div class="dashboard-card">
+            <h3>Reservas</h3>
+            <div class="stats">
+                <p>Reservas Hoje: {{ todays_reservations }}</p>
+                <p>Check-ins Pendentes: {{ pending_checkins }}</p>
+                <p>Check-outs Pendentes: {{ pending_checkouts }}</p>
+            </div>
+        </div>
+        
+        <div class="dashboard-card">
+            <h3>Manutenção</h3>
+            <div class="stats">
+                <p>Quartos em Manutenção: {{ maintenance_rooms }}</p>
+                <p>Quartos para Limpeza: {{ dirty_rooms }}</p>
+            </div>
+        </div>
+        
+        <div class="dashboard-card">
+            <h3>Financeiro</h3>
+            <div class="stats">
+                <p>Faturamento do Mês: R$ {{ monthly_revenue }}</p>
+                <p>Pagamentos Pendentes: R$ {{ pending_payments }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="quick-actions">
+        <h3>Ações Rápidas</h3>
+        <div class="action-buttons">
+            <a href="{% url 'system-settings' %}" class="btn">Configurações do Sistema</a>
+            <a href="{% url 'user-management' %}" class="btn">Gerenciar Usuários</a>
+            <a href="{% url 'reports:list' %}" class="btn">Gerar Relatórios</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Atualiza as estatísticas a cada 5 minutos
+        setInterval(function() {
+            fetch('/api/admin/dashboard-stats/')
+                .then(response => response.json())
+                .then(data => updateDashboard(data))
+                .catch(error => console.error('Erro ao atualizar dashboard:', error));
+        }, 300000);
+    });
+
+    function updateDashboard(data) {
+        // Atualiza cada estatística com os novos dados
+        Object.keys(data).forEach(key => {
+            const element = document.querySelector(`[data-stat="${key}"]`);
+            if (element) {
+                element.textContent = data[key];
+            }
+        });
+    }
+</script>
+{% endblock %}

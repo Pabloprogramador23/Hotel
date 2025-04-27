@@ -1,0 +1,37 @@
+{% extends 'reports/base_reports.html' %}
+
+{% block report_content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Occupancy Report</h2>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Total Rooms</h5>
+                        <p class="display-4">{{ total_rooms }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Occupied Rooms</h5>
+                        <p class="display-4">{{ occupied_rooms }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Occupancy Rate</h5>
+                        <p class="display-4">{{ occupancy_rate }}%</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
