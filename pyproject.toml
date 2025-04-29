@@ -1,11 +1,19 @@
 [project]
 name = "hotel-hms"
 version = "0.1.0"
-description = "Hotel Management System"
+description = "Sistema de gerenciamento hoteleiro"
+requires-python = ">=3.12"
+
 dependencies = [
-    "django>=5.0.0",
-    "pytest>=8.3.5",
-    "pytest-django>=4.11.1"
+    "django>=5.0.0,<6.0.0",
+    "pytest>=8.0.0",
+    "pytest-django>=4.8.0",
+    "pytest-cov>=4.1.0",        # Para análise de cobertura de testes
+    "psycopg>=3.1.12",           # PostgreSQL para produção
+    "whitenoise>=6.5.0",         # Para servir arquivos estáticos
+    "gunicorn>=21.2.0",          # Servidor WSGI para produção
+    "python-dotenv>=1.0.0",      # Para gerenciar variáveis de ambiente
+    "redis>=5.0.0",              # Para cache em produção
 ]
 
 [build-system]
@@ -14,4 +22,5 @@ build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "hotel_hms.settings"
-python_files = ["test_*.py", "*_test.py", "tests.py"]
+python_files = ["test_*.py", "*_test.py", "tests.py", "tests/*.py"]
+addopts = "-ra -q"

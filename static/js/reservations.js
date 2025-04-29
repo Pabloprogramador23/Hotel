@@ -107,31 +107,37 @@ async function changeStatus(reservationId) {
 // Funções para check-in e check-out
 async function doCheckIn(reservationId) {
     try {
-        const response = await fetchApi(`/api/reservations/${reservationId}/check-in/`, {
+        const response = await fetchApi(`/checkin_checkout/checkin/${reservationId}/`, {
             method: 'POST'
         });
         
         if (response.success) {
             showNotification('Check-in realizado com sucesso!', 'success');
             location.reload();
+        } else {
+            showNotification(`Erro: ${response.message}`, 'error');
         }
     } catch (error) {
         console.error('Erro no check-in:', error);
+        showNotification('Ocorreu um erro ao processar o check-in.', 'error');
     }
 }
 
 async function doCheckOut(reservationId) {
     try {
-        const response = await fetchApi(`/api/reservations/${reservationId}/check-out/`, {
+        const response = await fetchApi(`/checkin_checkout/checkout/${reservationId}/`, {
             method: 'POST'
         });
         
         if (response.success) {
             showNotification('Check-out realizado com sucesso!', 'success');
             location.reload();
+        } else {
+            showNotification(`Erro: ${response.message}`, 'error');
         }
     } catch (error) {
         console.error('Erro no check-out:', error);
+        showNotification('Ocorreu um erro ao processar o check-out.', 'error');
     }
 }
 

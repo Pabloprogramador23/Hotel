@@ -4,21 +4,42 @@ asgiref==3.8.1
     # via django
 colorama==0.4.6
     # via pytest
+coverage==7.8.0
+    # via pytest-cov
 django==5.2
+    # via hotel-hms (pyproject.toml)
+gunicorn==23.0.0
     # via hotel-hms (pyproject.toml)
 iniconfig==2.1.0
     # via pytest
 packaging==25.0
-    # via pytest
+    # via
+    #   gunicorn
+    #   pytest
 pluggy==1.5.0
     # via pytest
+psycopg==3.2.6
+    # via hotel-hms (pyproject.toml)
 pytest==8.3.5
     # via
     #   hotel-hms (pyproject.toml)
+    #   pytest-cov
     #   pytest-django
+pytest-cov==6.1.1
+    # via hotel-hms (pyproject.toml)
 pytest-django==4.11.1
+    # via hotel-hms (pyproject.toml)
+python-dotenv==1.1.0
+    # via hotel-hms (pyproject.toml)
+redis==5.2.1
     # via hotel-hms (pyproject.toml)
 sqlparse==0.5.3
     # via django
+typing-extensions==4.13.2
+    # via psycopg
 tzdata==2025.2
-    # via django
+    # via
+    #   django
+    #   psycopg
+whitenoise==6.9.0
+    # via hotel-hms (pyproject.toml)

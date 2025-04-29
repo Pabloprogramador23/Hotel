@@ -1,37 +1,62 @@
 {% extends 'reports/base_reports.html' %}
+{% load static %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
 
 {% block report_content %}
-<div class="card">
+<div class="card mb-4">
     <div class="card-header">
-        <h2>Occupancy Report</h2>
+        <h2>Visão Geral da Ocupação</h2>
     </div>
     <div class="card-body">
-        <div class="row">
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Total Rooms</h5>
-                        <p class="display-4">{{ total_rooms }}</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Occupied Rooms</h5>
-                        <p class="display-4">{{ occupied_rooms }}</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Occupancy Rate</h5>
-                        <p class="display-4">{{ occupancy_rate }}%</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <canvas id="occupancyChart"></canvas>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js não foi carregado corretamente. Verifique o link da biblioteca.');
+        return;
+    }
+
+    const ctx = document.getElementById('occupancyChart').getContext('2d');
+    const data = {
+        labels: [{% for stat in room_type_stats %}'{{ stat.room_type|default:"Não especificado" }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+        datasets: [
+            {
+                label: 'Quartos Ocupados',
+                data: [{% for stat in room_type_stats %}{{ stat.occupied }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }
+        ]
+    };
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: data,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: true,
+                    text: 'Ocupação por Tipo de Quarto'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+});
+</script>
 {% endblock %}

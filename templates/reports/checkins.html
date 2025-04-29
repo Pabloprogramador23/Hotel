@@ -3,17 +3,17 @@
 {% block report_content %}
 <div class="card">
     <div class="card-header">
-        <h2>Check-ins Report</h2>
+        <h2>Relatório de Check-ins</h2>
     </div>
     <div class="card-body">
         <div class="table-responsive">
             <table class="table table-striped">
                 <thead>
                     <tr>
-                        <th>Check-in Time</th>
-                        <th>Guest</th>
-                        <th>Room</th>
-                        <th>Documents</th>
+                        <th>Hora do Check-in</th>
+                        <th>Hóspede</th>
+                        <th>Quarto</th>
+                        <th>Documentos</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -24,9 +24,9 @@
                         <td>{{ checkin.reservation.room.number }}</td>
                         <td>
                             {% if checkin.document_scanned %}
-                                <span class="badge bg-success">Scanned</span>
+                                <span class="badge bg-success">Digitalizado</span>
                             {% else %}
-                                <span class="badge bg-warning">Pending</span>
+                                <span class="badge bg-warning">Pendente</span>
                             {% endif %}
                         </td>
                     </tr>

@@ -1,60 +1,163 @@
 {% extends 'reports/base_reports.html' %}
+{% load static %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
 
 {% block report_content %}
-<div class="card">
+<div class="card mb-4">
     <div class="card-header">
-        <h2>Revenue Report</h2>
+        <h2>Relatório de Receita</h2>
     </div>
     <div class="card-body">
         <form method="get" class="mb-4">
-            <div class="row">
+            <div class="row g-3">
                 <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="start_date">Start Date</label>
-                        <input type="date" class="form-control" id="start_date" name="start_date" 
-                               value="{{ start_date|date:'Y-m-d' }}">
-                    </div>
+                    <label for="start_date" class="form-label">Data Inicial</label>
+                    <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
                 </div>
                 <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="end_date">End Date</label>
-                        <input type="date" class="form-control" id="end_date" name="end_date" 
-                               value="{{ end_date|date:'Y-m-d' }}">
-                    </div>
+                    <label for="end_date" class="form-label">Data Final</label>
+                    <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
                 </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label>&nbsp;</label>
-                        <button type="submit" class="btn btn-primary d-block">Generate Report</button>
-                    </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary">Filtrar</button>
                 </div>
             </div>
         </form>
 
-        <div class="table-responsive">
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Description</th>
-                        <th class="text-end">Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in revenue_data %}
-                    <tr>
-                        <td>{{ item.date }}</td>
-                        <td>{{ item.description }}</td>
-                        <td class="text-end">{{ item.amount }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="3" class="text-center">No revenue data available for the selected period.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Receita Total</h5>
+                        <p class="display-4">R$ {{ total_revenue|floatformat:2 }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Receita Paga</h5>
+                        <p class="display-4">R$ {{ total_paid|floatformat:2 }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Receita Pendente</h5>
+                        <p class="display-4">R$ {{ total_pending|floatformat:2 }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Receita ao Longo do Tempo</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Detalhes Diários da Receita</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Receita Total</th>
+                                        <th>Paga</th>
+                                        <th>Pendente</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for day in revenue_data %}
+                                    <tr>
+                                        <td>{{ day.date|date:"d/m/Y" }}</td>
+                                        <td>R$ {{ day.total_amount|default:0|floatformat:2 }}</td>
+                                        <td>R$ {{ day.paid_amount|default:0|floatformat:2 }}</td>
+                                        <td>R$ {{ day.pending_amount|default:0|floatformat:2 }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center">Nenhum dado de receita disponível para este período.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+    const data = {
+        labels: [{% for day in revenue_data %}'{{ day.date|date:"d/m/Y" }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+        datasets: [
+            {
+                label: 'Receita Total',
+                data: [{% for day in revenue_data %}{{ day.total_amount|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1,
+                fill: false
+            },
+            {
+                label: 'Receita Paga',
+                data: [{% for day in revenue_data %}{{ day.paid_amount|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                borderColor: 'rgb(54, 162, 235)',
+                tension: 0.1,
+                fill: false
+            },
+            {
+                label: 'Receita Pendente',
+                data: [{% for day in revenue_data %}{{ day.pending_amount|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                borderColor: 'rgb(255, 99, 132)',
+                tension: 0.1,
+                fill: false
+            }
+        ]
+    };
+
+    new Chart(ctx, {
+        type: 'line',
+        data: data,
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Tendências de Receita'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + value.toFixed(2);
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
 {% endblock %}

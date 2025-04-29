@@ -1,0 +1,48 @@
+{% extends 'base_test.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ title }}</h2>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label for="key" class="form-label">Chave</label>
+                    <input type="text" class="form-control" id="key" name="key" value="{{ key|default:'' }}" {% if setting %}readonly{% endif %} required>
+                    <div class="form-text">Identificador único para esta configuração.</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="value" class="form-label">Valor</label>
+                    <textarea class="form-control" id="value" name="value" rows="3" required>{{ value|default:'' }}</textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="description" class="form-label">Descrição</label>
+                    <input type="text" class="form-control" id="description" name="description" value="{{ description|default:'' }}">
+                    <div class="form-text">Descrição opcional para explicar o propósito desta configuração.</div>
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'settings_manager:list' %}" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

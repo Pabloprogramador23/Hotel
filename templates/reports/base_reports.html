@@ -3,12 +3,12 @@
 {% block content %}
 <div class="container">
     <nav class="nav nav-pills mb-3">
-        <a class="nav-link {% if request.resolver_match.url_name == 'report-occupancy' %}active{% endif %}" 
-           href="{% url 'report-occupancy' %}">Occupancy Report</a>
-        <a class="nav-link {% if request.resolver_match.url_name == 'report-revenue' %}active{% endif %}" 
-           href="{% url 'report-revenue' %}">Revenue Report</a>
-        <a class="nav-link {% if request.resolver_match.url_name == 'report-checkins' %}active{% endif %}" 
-           href="{% url 'report-checkins' %}">Check-ins Report</a>
+        <a class="nav-link {% if request.resolver_match.url_name == 'occupancy' %}active{% endif %}" 
+           href="{% url 'reports:occupancy' %}">Occupancy Report</a>
+        <a class="nav-link {% if request.resolver_match.url_name == 'revenue' %}active{% endif %}" 
+           href="{% url 'reports:revenue' %}">Revenue Report</a>
+        <a class="nav-link {% if request.resolver_match.url_name == 'checkins' %}active{% endif %}" 
+           href="{% url 'reports:checkins' %}">Check-ins Report</a>
     </nav>
     {% block report_content %}{% endblock %}
 </div>

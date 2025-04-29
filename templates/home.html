@@ -2,109 +2,382 @@
 
 {% block title %}Dashboard - Sistema de Gerenciamento Hoteleiro{% endblock %}
 
+{% block page_title %}Dashboard{% endblock %}
+{% block breadcrumb_page %}Dashboard{% endblock %}
+
 {% block content %}
-<div class="home-dashboard">
-    <h2>Bem-vindo ao Sistema de Gerenciamento Hoteleiro</h2>
+<div class="animate-fade-in">
+    <!-- Cards de estatísticas -->
+    <div class="row g-4 mb-4">
+        <!-- Card de ocupação -->
+        <div class="col-md-4">
+            <div class="card stats-card h-100 border-start border-primary border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0 stats-title">Ocupação Atual</h5>
+                        <div class="stats-icon text-primary">
+                            <i class="fas fa-hotel"></i>
+                        </div>
+                    </div>
+                    <h2 class="display-4 fw-bold stats-value" id="occupancyRate">{{ occupancy_rate }}%</h2>
+                    <div class="d-flex justify-content-between mt-3">
+                        <div class="text-start">
+                            <span class="d-block text-muted small">Ocupados</span>
+                            <span class="fs-5 fw-semibold" id="occupiedRooms">{{ occupied_rooms }}</span>
+                        </div>
+                        <div class="text-end">
+                            <span class="d-block text-muted small">Disponíveis</span>
+                            <span class="fs-5 fw-semibold" id="availableRooms">{{ available_rooms }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <a href="{% url 'room-list' %}" class="text-decoration-none">
+                        Ver todos os quartos <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Card de check-ins -->
+        <div class="col-md-4">
+            <div class="card stats-card h-100 border-start border-success border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0 stats-title">Check-ins Hoje</h5>
+                        <div class="stats-icon text-success">
+                            <i class="fas fa-sign-in-alt"></i>
+                        </div>
+                    </div>
+                    <h2 class="display-4 fw-bold stats-value" id="todayCheckins">{{ todays_checkins }}</h2>
+                    <div class="d-flex justify-content-between mt-3">
+                        <div class="text-start">
+                            <span class="d-block text-muted small">Realizados</span>
+                            <span class="fs-5 fw-semibold" id="completedCheckins">{{ completed_checkins }}</span>
+                        </div>
+                        <div class="text-end">
+                            <span class="d-block text-muted small">Pendentes</span>
+                            <span class="fs-5 fw-semibold" id="pendingCheckins">{{ pending_checkins }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#checkInModal">
+                        Realizar check-in <i class="fas fa-key ms-1"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Card de check-outs -->
+        <div class="col-md-4">
+            <div class="card stats-card h-100 border-start border-danger border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0 stats-title">Check-outs Hoje</h5>
+                        <div class="stats-icon text-danger">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </div>
+                    </div>
+                    <h2 class="display-4 fw-bold stats-value" id="todayCheckouts">{{ todays_checkouts }}</h2>
+                    <div class="d-flex justify-content-between mt-3">
+                        <div class="text-start">
+                            <span class="d-block text-muted small">Realizados</span>
+                            <span class="fs-5 fw-semibold" id="completedCheckouts">{{ completed_checkouts }}</span>
+                        </div>
+                        <div class="text-end">
+                            <span class="d-block text-muted small">Pendentes</span>
+                            <span class="fs-5 fw-semibold" id="pendingCheckouts">{{ pending_checkouts }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#checkOutModal">
+                        Realizar check-out <i class="fas fa-door-open ms-1"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     
-    <div class="stats-overview">
-        <div class="stat-card">
-            <h3>Ocupação Atual</h3>
-            <div class="stat-value">{{ occupancy_rate }}%</div>
-            <div class="stat-details">
-                <span>{{ occupied_rooms }} quartos ocupados</span>
-                <span>{{ available_rooms }} quartos disponíveis</span>
+    <div class="row g-4">
+        <!-- Atividades recentes -->
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-history me-2"></i>Atividades Recentes
+                    </h5>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-outline-primary">Hoje</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary">Esta Semana</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="activity-list">
+                        {% for activity in recent_activities %}
+                        <div class="d-flex align-items-center py-3 border-bottom">
+                            <div class="flex-shrink-0">
+                                {% if 'check-in' in activity.description %}
+                                    <span class="avatar bg-success-subtle text-success p-2 rounded">
+                                        <i class="fas fa-sign-in-alt"></i>
+                                    </span>
+                                {% elif 'check-out' in activity.description %}
+                                    <span class="avatar bg-danger-subtle text-danger p-2 rounded">
+                                        <i class="fas fa-sign-out-alt"></i>
+                                    </span>
+                                {% elif 'reserva' in activity.description %}
+                                    <span class="avatar bg-primary-subtle text-primary p-2 rounded">
+                                        <i class="fas fa-calendar-check"></i>
+                                    </span>
+                                {% else %}
+                                    <span class="avatar bg-secondary-subtle text-secondary p-2 rounded">
+                                        <i class="fas fa-tasks"></i>
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <p class="mb-0">{{ activity.description }}</p>
+                                <small class="text-muted">{{ activity.timestamp|date:"d/m/Y H:i" }}</small>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <p>Nenhuma atividade recente registrada.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    {% if recent_activities %}
+                    <div class="text-center mt-3">
+                        <button class="btn btn-light">Ver mais atividades</button>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
         
-        <div class="stat-card">
-            <h3>Check-ins Hoje</h3>
-            <div class="stat-value">{{ todays_checkins }}</div>
-            <div class="stat-details">
-                <span>{{ completed_checkins }} realizados</span>
-                <span>{{ pending_checkins }} pendentes</span>
-            </div>
-        </div>
-        
-        <div class="stat-card">
-            <h3>Check-outs Hoje</h3>
-            <div class="stat-value">{{ todays_checkouts }}</div>
-            <div class="stat-details">
-                <span>{{ completed_checkouts }} realizados</span>
-                <span>{{ pending_checkouts }} pendentes</span>
-            </div>
-        </div>
-    </div>
-
-    <div class="dashboard-sections">
-        <section class="recent-activity">
-            <h3>Atividades Recentes</h3>
-            <div class="activity-list">
-                {% for activity in recent_activities %}
-                <div class="activity-item">
-                    <span class="activity-time">{{ activity.timestamp|date:"H:i" }}</span>
-                    <span class="activity-description">{{ activity.description }}</span>
+        <!-- Ações rápidas -->
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-bolt me-2"></i>Ações Rápidas
+                    </h5>
                 </div>
-                {% empty %}
-                <p>Nenhuma atividade recente.</p>
-                {% endfor %}
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <a href="#" class="btn btn-primary d-flex flex-column align-items-center p-3 h-100 w-100" data-bs-toggle="modal" data-bs-target="#newReservationModal">
+                                <i class="fas fa-calendar-plus fa-2x mb-2"></i>
+                                <span>Nova Reserva</span>
+                            </a>
+                        </div>
+                        <div class="col-6">
+                            <a href="{% url 'room-list' %}" class="btn btn-info d-flex flex-column align-items-center p-3 h-100 w-100">
+                                <i class="fas fa-bed fa-2x mb-2"></i>
+                                <span>Ver Quartos</span>
+                            </a>
+                        </div>
+                        <div class="col-6">
+                            <a href="#" class="btn btn-success d-flex flex-column align-items-center p-3 h-100 w-100" data-bs-toggle="modal" data-bs-target="#checkInModal">
+                                <i class="fas fa-sign-in-alt fa-2x mb-2"></i>
+                                <span>Check-in</span>
+                            </a>
+                        </div>
+                        <div class="col-6">
+                            <a href="#" class="btn btn-danger d-flex flex-column align-items-center p-3 h-100 w-100" data-bs-toggle="modal" data-bs-target="#checkOutModal">
+                                <i class="fas fa-sign-out-alt fa-2x mb-2"></i>
+                                <span>Check-out</span>
+                            </a>
+                        </div>
+                        <div class="col-6">
+                            <a href="#" class="btn btn-warning d-flex flex-column align-items-center p-3 h-100 w-100" data-bs-toggle="modal" data-bs-target="#occupiedRoomsModal">
+                                <i class="fas fa-file-invoice-dollar fa-2x mb-2"></i>
+                                <span>Faturas por Quarto Ocupado</span>
+                            </a>
+                        </div>
+                        <div class="col-6">
+                            <a href="/reports/occupancy" class="btn btn-secondary d-flex flex-column align-items-center p-3 h-100 w-100">
+                                <i class="fas fa-chart-bar fa-2x mb-2"></i>
+                                <span>Relatórios</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </section>
-
-        <section class="quick-actions">
-            <h3>Ações Rápidas</h3>
-            <div class="action-grid">
-                <a href="{% url 'reservation-list' %}" class="action-card">
-                    <i class="fas fa-calendar-plus"></i>
-                    <span>Nova Reserva</span>
-                </a>
-                <a href="{% url 'room-list' %}" class="action-card">
-                    <i class="fas fa-bed"></i>
-                    <span>Status dos Quartos</span>
-                </a>
-                <a href="#" class="action-card" onclick="openCheckInModal()">
-                    <i class="fas fa-sign-in-alt"></i>
-                    <span>Check-in</span>
-                </a>
-                <a href="#" class="action-card" onclick="openCheckOutModal()">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Check-out</span>
-                </a>
-            </div>
-        </section>
+        </div>
     </div>
+</div>
 
-    <!-- Modal de Check-in -->
-    <div id="checkInModal" class="modal" style="display: none;">
+<!-- Modal de Check-in -->
+<div class="modal fade" id="checkInModal" tabindex="-1" aria-labelledby="checkInModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
         <div class="modal-content">
-            <button class="modal-close" onclick="closeModal('checkInModal')">&times;</button>
-            <h3>Realizar Check-in</h3>
-            <div class="checkin-list">
-                {% for reservation in pending_checkins_list %}
-                <div class="checkin-item">
-                    <span>{{ reservation.guest_name }} - Quarto {{ reservation.room.number }}</span>
-                    <button onclick="doCheckIn({{ reservation.id }})">Fazer Check-in</button>
+            <div class="modal-header">
+                <h5 class="modal-title" id="checkInModalLabel">
+                    <i class="fas fa-sign-in-alt me-2"></i>Realizar Check-in
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="checkin-list">
+                    {% for reservation in pending_checkins_list %}
+                    <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+                        <div>
+                            <h6 class="mb-0">{{ reservation.guest_name }}</h6>
+                            <small class="text-muted">Quarto {{ reservation.room.number }} - {{ reservation.room.room_type|title }}</small>
+                        </div>
+                        <button class="btn btn-sm btn-success" onclick="doCheckIn({{ reservation.id }})">
+                            Check-in <i class="fas fa-key ms-1"></i>
+                        </button>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-calendar-check fa-3x text-muted mb-3"></i>
+                        <p>Não há check-ins pendentes para hoje.</p>
+                    </div>
+                    {% endfor %}
                 </div>
-                {% empty %}
-                <p>Não há check-ins pendentes.</p>
-                {% endfor %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Modal de Check-out -->
-    <div id="checkOutModal" class="modal" style="display: none;">
+<!-- Modal de Check-out -->
+<div class="modal fade" id="checkOutModal" tabindex="-1" aria-labelledby="checkOutModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
         <div class="modal-content">
-            <button class="modal-close" onclick="closeModal('checkOutModal')">&times;</button>
-            <h3>Realizar Check-out</h3>
-            <div class="checkout-list">
-                {% for reservation in pending_checkouts_list %}
-                <div class="checkout-item">
-                    <span>{{ reservation.guest_name }} - Quarto {{ reservation.room.number }}</span>
-                    <button onclick="doCheckOut({{ reservation.id }})">Fazer Check-out</button>
+            <div class="modal-header">
+                <h5 class="modal-title" id="checkOutModalLabel">
+                    <i class="fas fa-sign-out-alt me-2"></i>Realizar Check-out
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="checkout-list">
+                    {% for reservation in pending_checkouts_list %}
+                    <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+                        <div>
+                            <h6 class="mb-0">{{ reservation.guest_name }}</h6>
+                            <small class="text-muted">Quarto {{ reservation.room.number }} - {{ reservation.room.room_type|title }}</small>
+                        </div>
+                        <button class="btn btn-sm btn-danger" onclick="doCheckOut({{ reservation.id }})">
+                            Check-out <i class="fas fa-door-open ms-1"></i>
+                        </button>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                        <p>Não há check-outs pendentes para hoje.</p>
+                    </div>
+                    {% endfor %}
                 </div>
-                {% empty %}
-                <p>Não há check-outs pendentes.</p>
-                {% endfor %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Nova Reserva -->
+<div class="modal fade" id="newReservationModal" tabindex="-1" aria-labelledby="newReservationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newReservationModalLabel">
+                    <i class="fas fa-calendar-plus me-2"></i>Nova Reserva
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="reservationForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="guestName" class="form-label">Nome do Hóspede</label>
+                            <input type="text" class="form-control" id="guestName" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="guestEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="guestEmail">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="roomType" class="form-label">Tipo de Quarto</label>
+                            <select class="form-select" id="roomType" required>
+                                <option value="">Selecione...</option>
+                                <option value="single">Solteiro</option>
+                                <option value="double">Casal</option>
+                                <option value="suite">Suíte</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="roomNumber" class="form-label">Número do Quarto</label>
+                            <select class="form-select" id="roomNumber" disabled>
+                                <option value="">Primeiro selecione o tipo de quarto</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="checkInDate" class="form-label">Data de Check-in</label>
+                            <input type="date" class="form-control" id="checkInDate" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="checkOutDate" class="form-label">Data de Check-out</label>
+                            <input type="date" class="form-control" id="checkOutDate" required>
+                        </div>
+                        <div class="col-12">
+                            <label for="notes" class="form-label">Observações</label>
+                            <textarea class="form-control" id="notes" rows="3"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="saveReservation">
+                    <i class="fas fa-save me-1"></i> Salvar Reserva
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Quartos Ocupados -->
+<div class="modal fade" id="occupiedRoomsModal" tabindex="-1" aria-labelledby="occupiedRoomsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="occupiedRoomsModalLabel">
+                    <i class="fas fa-bed me-2"></i>Quartos Ocupados
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="list-group">
+                    {% for reservation in occupied_reservations %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>Quarto:</strong> {{ reservation.room.number }}<br>
+                            <strong>Hóspede:</strong> {{ reservation.guest_name }}
+                        </div>
+                        <a href="{% url 'finance:reservation_invoices' reservation.id %}" class="btn btn-sm btn-warning">
+                            Ver Faturas
+                        </a>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-bed fa-2x text-muted mb-2"></i>
+                        <p>Nenhum quarto ocupado no momento.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
             </div>
         </div>
     </div>
@@ -116,6 +389,9 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Atualiza as estatísticas a cada 5 minutos
     setInterval(updateStats, 300000);
+    
+    // Configura o formulário de reserva
+    setupReservationForm();
 });
 
 async function updateStats() {
@@ -124,37 +400,325 @@ async function updateStats() {
         const data = await response.json();
         
         // Atualiza os valores no dashboard
-        document.querySelector('.stat-card:nth-child(1) .stat-value').textContent = data.occupancy_rate + '%';
-        document.querySelector('.stat-card:nth-child(2) .stat-value').textContent = data.todays_checkins;
-        document.querySelector('.stat-card:nth-child(3) .stat-value').textContent = data.todays_checkouts;
+        document.getElementById('occupancyRate').textContent = data.occupancy_rate + '%';
+        document.getElementById('todayCheckins').textContent = data.todays_checkins;
+        document.getElementById('todayCheckouts').textContent = data.todays_checkouts;
         
-        // Atualiza outros detalhes
-        updateStatDetails(data);
+        // Atualiza detalhes
+        document.getElementById('occupiedRooms').textContent = data.occupied_rooms;
+        document.getElementById('availableRooms').textContent = data.available_rooms;
+        document.getElementById('completedCheckins').textContent = data.completed_checkins;
+        document.getElementById('pendingCheckins').textContent = data.pending_checkins;
+        document.getElementById('completedCheckouts').textContent = data.completed_checkouts;
+        document.getElementById('pendingCheckouts').textContent = data.pending_checkouts;
     } catch (error) {
         console.error('Erro ao atualizar estatísticas:', error);
     }
 }
 
-function updateStatDetails(data) {
-    const detailsElements = document.querySelectorAll('.stat-details span');
-    detailsElements[0].textContent = `${data.occupied_rooms} quartos ocupados`;
-    detailsElements[1].textContent = `${data.available_rooms} quartos disponíveis`;
-    detailsElements[2].textContent = `${data.completed_checkins} realizados`;
-    detailsElements[3].textContent = `${data.pending_checkins} pendentes`;
-    detailsElements[4].textContent = `${data.completed_checkouts} realizados`;
-    detailsElements[5].textContent = `${data.pending_checkouts} pendentes`;
+async function doCheckIn(reservationId) {
+    try {
+        // Exibir indicador de carregamento
+        showLoadingIndicator(true);
+        
+        // Obter o CSRF token do cookie
+        const csrftoken = getCookie('csrftoken');
+        
+        const response = await fetch(`/checkin_checkout/checkin/${reservationId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Check-in realizado com sucesso!', 'success');
+            // Recarrega a página após o check-in
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showNotification(`Erro ao realizar check-in: ${data.message}`, 'error');
+            console.error('Detalhes do erro:', data);
+        }
+    } catch (error) {
+        console.error('Erro ao processar check-in:', error);
+        showNotification('Ocorreu um erro ao processar o check-in. Verifique o console para mais detalhes.', 'error');
+    } finally {
+        showLoadingIndicator(false);
+    }
 }
 
-function openCheckInModal() {
-    document.getElementById('checkInModal').style.display = 'flex';
+async function doCheckOut(reservationId) {
+    try {
+        // Exibir indicador de carregamento
+        showLoadingIndicator(true);
+        
+        // Obter o CSRF token do cookie
+        const csrftoken = getCookie('csrftoken');
+        
+        const response = await fetch(`/checkin_checkout/checkout/${reservationId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Check-out realizado com sucesso!', 'success');
+            // Recarrega a página após o check-out
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showNotification(`Erro ao realizar check-out: ${data.message}`, 'error');
+            console.error('Detalhes do erro:', data);
+        }
+    } catch (error) {
+        console.error('Erro ao processar check-out:', error);
+        showNotification('Ocorreu um erro ao processar o check-out. Verifique o console para mais detalhes.', 'error');
+    } finally {
+        showLoadingIndicator(false);
+    }
 }
 
-function openCheckOutModal() {
-    document.getElementById('checkOutModal').style.display = 'flex';
+// Função para exibir/ocultar indicador de carregamento
+function showLoadingIndicator(show) {
+    if (show) {
+        const loader = document.createElement('div');
+        loader.id = 'processing-loader';
+        loader.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        `;
+        
+        const spinner = document.createElement('div');
+        spinner.className = 'spinner-border text-light';
+        spinner.setAttribute('role', 'status');
+        
+        const spinnerText = document.createElement('span');
+        spinnerText.className = 'visually-hidden';
+        spinnerText.textContent = 'Processando...';
+        
+        spinner.appendChild(spinnerText);
+        loader.appendChild(spinner);
+        document.body.appendChild(loader);
+    } else {
+        const loader = document.getElementById('processing-loader');
+        if (loader) {
+            loader.remove();
+        }
+    }
 }
 
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
+// Função para exibir notificações estilizadas
+function showNotification(message, type = 'info') {
+    // Mapeamento de tipos para classes Bootstrap
+    const typeClasses = {
+        'success': 'alert-success',
+        'error': 'alert-danger',
+        'warning': 'alert-warning',
+        'info': 'alert-info'
+    };
+    
+    const alert = document.createElement('div');
+    alert.className = `alert ${typeClasses[type] || 'alert-info'} alert-dismissible fade show notification`;
+    alert.role = 'alert';
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+    `;
+    
+    // Estilizar a notificação
+    alert.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    `;
+    
+    document.body.appendChild(alert);
+    
+    // Remover após 5 segundos
+    setTimeout(() => {
+        alert.classList.remove('show');
+        setTimeout(() => alert.remove(), 300);
+    }, 5000);
+}
+
+// Função para obter o valor de um cookie
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function setupReservationForm() {
+    const roomTypeSelect = document.getElementById('roomType');
+    const roomNumberSelect = document.getElementById('roomNumber');
+    const checkInDateInput = document.getElementById('checkInDate');
+    const checkOutDateInput = document.getElementById('checkOutDate');
+    const saveButton = document.getElementById('saveReservation');
+    
+    // Configurar data mínima como hoje
+    const today = new Date().toISOString().split('T')[0];
+    checkInDateInput.value = today;
+    checkInDateInput.min = today;
+    checkOutDateInput.value = new Date(Date.now() + 86400000).toISOString().split('T')[0]; // amanhã
+    checkOutDateInput.min = today;
+    
+    // Atualizar quartos disponíveis quando o tipo de quarto mudar
+    roomTypeSelect.addEventListener('change', async function() {
+        const roomType = this.value;
+        if (!roomType) return;
+        
+        try {
+            roomNumberSelect.disabled = true;
+            roomNumberSelect.innerHTML = '<option value="">Carregando quartos...</option>';
+            
+            // Buscar quartos disponíveis na API
+            const checkIn = checkInDateInput.value;
+            const checkOut = checkOutDateInput.value;
+            const response = await fetch(`/api/available-rooms/?room_type=${roomType}&check_in=${checkIn}&check_out=${checkOut}`);
+            
+            if (!response.ok) {
+                throw new Error('Erro ao buscar quartos disponíveis');
+            }
+            
+            const rooms = await response.json();
+            
+            // Atualizar o select de quartos
+            roomNumberSelect.innerHTML = '';
+            
+            if (rooms.length === 0) {
+                roomNumberSelect.innerHTML = '<option value="">Nenhum quarto disponível</option>';
+                roomNumberSelect.disabled = true;
+                return;
+            }
+            
+            // Adicionar os quartos disponíveis
+            rooms.forEach(room => {
+                const option = document.createElement('option');
+                option.value = room.id;
+                option.textContent = `${room.number} (${room.room_type})`;
+                roomNumberSelect.appendChild(option);
+            });
+            
+            roomNumberSelect.disabled = false;
+        } catch (error) {
+            console.error('Erro ao carregar quartos:', error);
+            roomNumberSelect.innerHTML = '<option value="">Erro ao carregar quartos</option>';
+        }
+    });
+    
+    // Atualizar datas de check-in e check-out
+    checkInDateInput.addEventListener('change', function() {
+        // Garantir que o check-out seja sempre depois do check-in
+        if (checkOutDateInput.value <= this.value) {
+            // Definir check-out para o dia seguinte ao check-in
+            const nextDay = new Date(this.value);
+            nextDay.setDate(nextDay.getDate() + 1);
+            checkOutDateInput.value = nextDay.toISOString().split('T')[0];
+        }
+        
+        // Atualizar quartos disponíveis se um tipo já foi selecionado
+        if (roomTypeSelect.value) {
+            roomTypeSelect.dispatchEvent(new Event('change'));
+        }
+    });
+    
+    checkOutDateInput.addEventListener('change', function() {
+        // Garantir que o check-out seja sempre depois do check-in
+        if (this.value <= checkInDateInput.value) {
+            alert('A data de check-out deve ser posterior à data de check-in');
+            
+            // Redefinir para o dia seguinte ao check-in
+            const nextDay = new Date(checkInDateInput.value);
+            nextDay.setDate(nextDay.getDate() + 1);
+            this.value = nextDay.toISOString().split('T')[0];
+        }
+        
+        // Atualizar quartos disponíveis se um tipo já foi selecionado
+        if (roomTypeSelect.value) {
+            roomTypeSelect.dispatchEvent(new Event('change'));
+        }
+    });
+    
+    // Configurar o botão de salvar
+    saveButton.addEventListener('click', async function() {
+        const form = document.getElementById('reservationForm');
+        
+        // Verificar se os campos obrigatórios estão preenchidos
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        
+        // Obter dados do formulário
+        const guestName = document.getElementById('guestName').value;
+        const guestEmail = document.getElementById('guestEmail').value;
+        const roomId = roomNumberSelect.value;
+        const checkInDate = checkInDateInput.value;
+        const checkOutDate = checkOutDateInput.value;
+        const notes = document.getElementById('notes').value;
+        
+        try {
+            // Enviar requisição para criar a reserva
+            const response = await fetch('/api/reservations/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({
+                    guest_name: guestName,
+                    guest_email: guestEmail,
+                    room_id: roomId,
+                    check_in_date: checkInDate,
+                    check_out_date: checkOutDate,
+                    notes: notes,
+                    status: 'confirmed'
+                })
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Erro ao salvar a reserva');
+            }
+            
+            // Reserva criada com sucesso
+            alert('Reserva criada com sucesso!');
+            
+            // Fechar o modal e recarregar a página
+            const modal = bootstrap.Modal.getInstance(document.getElementById('newReservationModal'));
+            modal.hide();
+            window.location.reload();
+        } catch (error) {
+            console.error('Erro ao salvar reserva:', error);
+            alert(error.message || 'Ocorreu um erro ao salvar a reserva');
+        }
+    });
 }
 </script>
 {% endblock %}

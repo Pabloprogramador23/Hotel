@@ -63,6 +63,8 @@ def home(request):
     recent_activities.sort(key=lambda x: x['timestamp'], reverse=True)
     recent_activities = recent_activities[:10]
     
+    # Quartos ocupados (reservas com status 'checked_in' e não checked_out)
+    occupied_reservations = Reservation.objects.filter(status='checked_in', checked_out=False).select_related('room')
     context = {
         'occupancy_rate': occupancy_rate,
         'occupied_rooms': occupied_rooms,
@@ -76,6 +78,6 @@ def home(request):
         'pending_checkins_list': pending_checkins_list,
         'pending_checkouts_list': pending_checkouts_list,
         'recent_activities': recent_activities,
+        'occupied_reservations': occupied_reservations,
     }
-    
     return render(request, 'home.html', context)

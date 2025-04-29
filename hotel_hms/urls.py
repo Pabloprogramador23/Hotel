@@ -26,6 +26,16 @@ urlpatterns = [
     path('api/', include('apps.api.urls')),
     path('reservations/', include('apps.reservations.urls')),
     path('rooms/', include('apps.rooms.urls')),
+    # Usando apenas uma versão do caminho para evitar conflitos
+    path('checkin_checkout/', include('apps.checkin_checkout.urls', namespace='checkin_checkout')),
+    path('finance/', include(('apps.finance.urls', 'finance'), namespace='finance')),
     path('reports/', include('apps.reports.urls')),
-    path('administration/', include('apps.administration.urls')),
-] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    path('settings/', include('apps.settings_manager.urls')),
+]
+
+# Adiciona URLs para arquivos estáticos
+urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+# Adiciona URLs para arquivos de mídia apenas em ambiente de desenvolvimento
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
