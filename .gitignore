@@ -8,3 +8,69 @@ wheels/
 
 # Virtual environments
 .venv
+venv/
+ENV/
+
+# IDEs e editores
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Arquivos de configuração e credenciais
+.env
+.env.*
+*.env
+*.secret
+*.key
+*.pem
+*.crt
+*.pfx
+*.p12
+secrets.json
+settings_local.py
+settings_dev.py
+settings_test.py
+
+# Banco de dados e arquivos sensíveis
+*.sqlite3
+*.db
+*.bak
+*.tmp
+*.log
+
+# Arquivos de mídia e uploads
+media/
+*.pdf
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.csv
+*.xlsx
+*.zip
+
+# Arquivos temporários e de cache
+*.swp
+*.swo
+*.tmp
+*.DS_Store
+Thumbs.db
+.cache/
+
+# Arquivos de lock e dependências gerados
+poetry.lock
+Pipfile.lock
+
+# Arquivos de testes
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+
+# Outros
+node_modules/
+
+# Git
+.git/
+.gitignore.swp
