@@ -8,6 +8,9 @@ coverage==7.8.0
     # via pytest-cov
 django==5.2
     # via hotel-hms (pyproject.toml)
+djangorestframework>=3.15.0
+# Para autenticação JWT
+ djangorestframework-simplejwt>=5.3.1
 gunicorn==23.0.0
     # via hotel-hms (pyproject.toml)
 iniconfig==2.1.0
@@ -33,6 +36,7 @@ python-dotenv==1.1.0
     # via hotel-hms (pyproject.toml)
 redis==5.2.1
     # via hotel-hms (pyproject.toml)
+sentry-sdk>=2.0.0
 sqlparse==0.5.3
     # via django
 typing-extensions==4.13.2

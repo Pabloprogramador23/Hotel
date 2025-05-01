@@ -4,8 +4,13 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.contrib.auth.models import User, Permission
 from django.contrib.contenttypes.models import ContentType
+from datetime import date, timedelta
 
 from apps.reports.models import Report
+from apps.reports.services import calculate_revenue_data
+from apps.finance.models import Invoice
+from apps.reservations.models import Reservation
+from apps.rooms.models import Room
 
 
 @pytest.mark.django_db
@@ -127,3 +132,25 @@ class TestReportViews:
         for report in setup_sample_reports:
             if os.path.exists(report.file_path.path):
                 os.remove(report.file_path.path)
+
+
+@pytest.mark.django_db
+def test_calculate_revenue_data_basic():
+    """Testa cálculo de receita agregada para um período simples."""
+    room = Room.objects.create(number="101", room_type="single", status="clean")
+    reservation = Reservation.objects.create(
+        guest_name="Test Guest",
+        room=room,
+        check_in_date=date.today(),
+        check_out_date=date.today() + timedelta(days=2),
+        status="confirmed"
+    )
+    Invoice.objects.create(reservation=reservation, amount=100, paid=True)
+    Invoice.objects.create(reservation=reservation, amount=50, paid=False)
+    start = date.today()
+    end = date.today()
+    revenue_data, total_revenue, total_paid, total_pending = calculate_revenue_data(start, end)
+    assert total_revenue == 150
+    assert total_paid == 100
+    assert total_pending == 50
+    assert len(revenue_data) == 1

@@ -9,6 +9,10 @@
            href="{% url 'reports:revenue' %}">Revenue Report</a>
         <a class="nav-link {% if request.resolver_match.url_name == 'checkins' %}active{% endif %}" 
            href="{% url 'reports:checkins' %}">Check-ins Report</a>
+        <a class="nav-link {% if request.resolver_match.url_name == 'cash_flow' %}active{% endif %}" 
+           href="{% url 'reports:cash_flow' %}">Cash Flow Report</a>
+        <a class="nav-link {% if request.resolver_match.url_name == 'financial_report' %}active{% endif %}" 
+           href="{% url 'reports:financial_report' %}">Relatório Financeiro Detalhado</a>
     </nav>
     {% block report_content %}{% endblock %}
 </div>

@@ -3,12 +3,14 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.db import transaction
 from django.utils import timezone
+from django.contrib.auth.decorators import login_required
 
 from apps.reservations.models import Reservation
 from apps.finance.models import Invoice
 from apps.rooms.models import Room
 from apps.checkin_checkout.models import CheckIn, CheckOut
 
+@login_required
 @require_POST
 def perform_checkin(request, reservation_id):
     """
@@ -67,6 +69,7 @@ def perform_checkin(request, reservation_id):
             'message': f'Ocorreu um erro ao processar o check-in: {str(e)}'
         }, status=500)
 
+@login_required
 @require_POST
 def perform_checkout(request, reservation_id):
     """
@@ -135,6 +138,7 @@ def perform_checkout(request, reservation_id):
             'message': f'Ocorreu um erro ao processar o check-out: {str(e)}'
         }, status=500)
 
+@login_required
 def list_current_guests(request):
     """
     Lista todas as reservas com check-in mas sem check-out
@@ -151,6 +155,7 @@ def list_current_guests(request):
     
     return JsonResponse({'current_guests': guests_data})
 
+@login_required
 def list_expected_arrivals(request):
     """
     Lista todas as reservas que têm check-in esperado para hoje
@@ -167,6 +172,7 @@ def list_expected_arrivals(request):
     
     return JsonResponse({'expected_arrivals': arrivals_data})
 
+@login_required
 def list_expected_departures(request):
     """
     Lista todas as reservas que têm check-out esperado para hoje

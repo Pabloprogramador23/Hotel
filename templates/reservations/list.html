@@ -56,6 +56,18 @@
         </tbody>
     </table>
 
+    <div class="pagination">
+        {% if page_obj.has_previous %}
+            <a href="?page=1{% if request.GET.date %}&date={{ request.GET.date }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.guest %}&guest={{ request.GET.guest }}{% endif %}">&laquo; Primeira</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.date %}&date={{ request.GET.date }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.guest %}&guest={{ request.GET.guest }}{% endif %}">&lsaquo; Anterior</a>
+        {% endif %}
+        <span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if request.GET.date %}&date={{ request.GET.date }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.guest %}&guest={{ request.GET.guest }}{% endif %}">Próxima &rsaquo;</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.date %}&date={{ request.GET.date }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.guest %}&guest={{ request.GET.guest }}{% endif %}">Última &raquo;</a>
+        {% endif %}
+    </div>
+
     <button class="add-reservation-btn" onclick="openAddReservationModal()">Nova Reserva</button>
 </div>
 

@@ -1,0 +1,377 @@
+{% extends 'reports/base_reports.html' %}
+{% load static %}
+
+{% block title %}Relatório Financeiro Detalhado{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block report_content %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h2>Relatório Financeiro Detalhado</h2>
+        <p class="text-muted">
+            Este relatório apresenta uma visão completa das finanças do hotel, incluindo todas as receitas e despesas.
+            Período: <strong>{{ start_date|date:"d/m/Y" }}</strong> até <strong>{{ end_date|date:"d/m/Y" }}</strong>
+        </p>
+    </div>
+    <div class="card-body">
+        <!-- Filtro de período -->
+        <form method="get" class="mb-4">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="start_date" class="form-label">Data Inicial</label>
+                    <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-4">
+                    <label for="end_date" class="form-label">Data Final</label>
+                    <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-filter me-1"></i> Filtrar
+                    </button>
+                    <a href="{% url 'reports:financial_report' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-redo me-1"></i> Limpar
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        <!-- Cards de resumo financeiro -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-light h-100">
+                    <div class="card-body text-center">
+                        <h6 class="card-title text-muted">Receitas Totais</h6>
+                        <h3 class="text-primary mb-0">R$ {{ total_revenue|floatformat:2 }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-light h-100">
+                    <div class="card-body text-center">
+                        <h6 class="card-title text-muted">Despesas Totais</h6>
+                        <h3 class="text-danger mb-0">R$ {{ total_expense|floatformat:2 }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <h6 class="card-title text-muted">Lucro Líquido</h6>
+                        {% if net_profit >= 0 %}
+                            <h3 class="text-success mb-0">R$ {{ net_profit|floatformat:2 }}</h3>
+                        {% else %}
+                            <h3 class="text-danger mb-0">-R$ {{ net_profit|abs|floatformat:2 }}</h3>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-light h-100">
+                    <div class="card-body text-center">
+                        <h6 class="card-title text-muted">Margem de Lucro</h6>
+                        {% if total_revenue > 0 %}
+                            <h3 class="{% if profit_margin >= 0 %}text-success{% else %}text-danger{% endif %} mb-0">
+                                {{ profit_margin|floatformat:1 }}%
+                            </h3>
+                        {% else %}
+                            <h3 class="text-muted mb-0">N/A</h3>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico de Comparação -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Comparativo de Receitas e Despesas</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="financialChart" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabelas de Detalhes -->
+        <div class="row">
+            <!-- Tabela de Receitas -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Receitas Detalhadas</h5>
+                        <a href="{% url 'finance:all_invoices' %}" class="btn btn-sm btn-outline-primary">
+                            Ver Todas as Faturas
+                        </a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Descrição</th>
+                                        <th class="text-end">Valor</th>
+                                        <th class="text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for entry in revenue_entries %}
+                                    <tr>
+                                        <td>{{ entry.date|date:"d/m/Y" }}</td>
+                                        <td>
+                                            Fatura #{{ entry.id }} - {{ entry.guest_name }}
+                                            <small class="d-block text-muted">Quarto {{ entry.room_number }}</small>
+                                        </td>
+                                        <td class="text-end">R$ {{ entry.amount|floatformat:2 }}</td>
+                                        <td class="text-center">
+                                            {% if entry.paid %}
+                                                <span class="badge bg-success">Pago</span>
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark">Pendente</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4">
+                                            <i class="fas fa-info-circle text-muted mb-2"></i>
+                                            <p>Nenhuma receita registrada no período.</p>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tabela de Despesas -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Despesas Detalhadas</h5>
+                        <a href="{% url 'finance:expense_list' %}" class="btn btn-sm btn-outline-danger">
+                            Ver Todas as Despesas
+                        </a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Descrição</th>
+                                        <th>Categoria</th>
+                                        <th class="text-end">Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for entry in expense_entries %}
+                                    <tr>
+                                        <td>{{ entry.payment_date|date:"d/m/Y" }}</td>
+                                        <td>{{ entry.description }}</td>
+                                        <td>{{ entry.get_category_display }}</td>
+                                        <td class="text-end">R$ {{ entry.amount|floatformat:2 }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4">
+                                            <i class="fas fa-info-circle text-muted mb-2"></i>
+                                            <p>Nenhuma despesa registrada no período.</p>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráficos Adicionais -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Despesas por Categoria</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if category_expenses %}
+                            <canvas id="expenseCategoryChart" height="300"></canvas>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                                <p>Sem dados suficientes para gerar o gráfico</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Status de Pagamentos</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if total_revenue > 0 %}
+                            <div class="mb-3">
+                                <h6 class="card-subtitle text-muted mb-2">Faturamento Total: R$ {{ total_revenue|floatformat:2 }}</h6>
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar bg-success" role="progressbar" 
+                                         style="width: {{ payment_percentage|floatformat:0 }}%;" 
+                                         aria-valuenow="{{ payment_percentage|floatformat:0 }}" 
+                                         aria-valuemin="0" aria-valuemax="100">
+                                        Pago: R$ {{ total_paid|floatformat:2 }}
+                                    </div>
+                                    <div class="progress-bar bg-warning" role="progressbar" 
+                                         style="width: {{ pending_percentage|floatformat:0 }}%;" 
+                                         aria-valuenow="{{ pending_percentage|floatformat:0 }}" 
+                                         aria-valuemin="0" aria-valuemax="100">
+                                        Pendente: R$ {{ total_pending|floatformat:2 }}
+                                    </div>
+                                </div>
+                                <small class="text-muted d-block text-center mt-2">
+                                    {{ payment_percentage|floatformat:0 }}% do faturamento já foi recebido
+                                </small>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                                <p>Sem dados suficientes para gerar o gráfico</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botões de ação -->
+        <div class="d-flex justify-content-between mt-4">
+            <a href="{% url 'reports:list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Voltar para Relatórios
+            </a>
+            <button class="btn btn-primary" onclick="window.print()">
+                <i class="fas fa-print me-2"></i>Imprimir Relatório
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gráfico de Comparativo de Receitas e Despesas
+    const financialCtx = document.getElementById('financialChart').getContext('2d');
+    new Chart(financialCtx, {
+        type: 'bar',
+        data: {
+            labels: [{% for day in daily_data %}'{{ day.date|date:"d/m/Y" }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            datasets: [
+                {
+                    label: 'Receitas',
+                    data: [{% for day in daily_data %}{{ day.revenue|floatformat:2 }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    backgroundColor: 'rgba(40, 167, 69, 0.5)',
+                    borderColor: 'rgb(40, 167, 69)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Despesas',
+                    data: [{% for day in daily_data %}{{ day.expense|floatformat:2 }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    backgroundColor: 'rgba(220, 53, 69, 0.5)',
+                    borderColor: 'rgb(220, 53, 69)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Receitas vs. Despesas'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': R$ ' + context.raw;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + value;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Gráfico de Despesas por Categoria
+    {% if category_expenses %}
+    const categoryCtx = document.getElementById('expenseCategoryChart').getContext('2d');
+    new Chart(categoryCtx, {
+        type: 'pie',
+        data: {
+            labels: [{% for category_code, data in category_expenses.items %}'{{ data.name }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                data: [{% for category_code, data in category_expenses.items %}{{ data.amount|floatformat:2 }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(153, 102, 255, 0.7)',
+                    'rgba(255, 159, 64, 0.7)',
+                    'rgba(199, 199, 199, 0.7)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Distribuição de Despesas por Categoria'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.raw;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${context.label}: R$ ${value} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+    {% endif %}
+});
+</script>
+
+<style>
+@media print {
+    .nav-pills, form, .btn, header {
+        display: none !important;
+    }
+    canvas {
+        max-height: 300px;
+    }
+}
+</style>
+{% endblock %}

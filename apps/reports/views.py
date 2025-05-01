@@ -1,3 +1,4 @@
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncDate
@@ -5,19 +6,40 @@ from datetime import date, timedelta, datetime
 from apps.rooms.models import Room
 from apps.checkin_checkout.models import CheckIn
 from apps.reservations.models import Reservation
-from apps.finance.models import Invoice
+from apps.finance.models import Invoice, Expense
+from .services import calculate_revenue_data, calculate_cash_flow_data, calculate_expense_data
 
-def report_list(request):
+def report_list(request: HttpRequest) -> HttpResponse:
+    """
+    Exibe a lista de relatórios disponíveis.
+
+    Args:
+        request (HttpRequest): Requisição HTTP.
+
+    Returns:
+        HttpResponse: Página com links para relatórios.
+    """
     return render(request, 'reports/list.html', {
         'title': 'Reports',
         'reports': [
             {'name': 'Occupancy Report', 'url': 'reports:occupancy'},
             {'name': 'Revenue Report', 'url': 'reports:revenue'},
             {'name': 'Check-ins Report', 'url': 'reports:checkins'},
+            {'name': 'Cash Flow Report', 'url': 'reports:cash_flow'},
+            {'name': 'Relatório Financeiro Detalhado', 'url': 'reports:financial_report'},
         ]
     })
 
-def occupancy_report(request):
+def occupancy_report(request: HttpRequest) -> HttpResponse:
+    """
+    Gera o relatório de ocupação do hotel.
+
+    Args:
+        request (HttpRequest): Requisição HTTP.
+
+    Returns:
+        HttpResponse: Página com estatísticas de ocupação.
+    """
     # Cálculos básicos de ocupação
     total_rooms = Room.objects.count()
     occupied_rooms = Room.objects.filter(status='occupied').count()
@@ -54,45 +76,26 @@ def occupancy_report(request):
     }
     return render(request, 'reports/occupancy.html', context)
 
-def revenue_report(request):
+def revenue_report(request: HttpRequest) -> HttpResponse:
+    """
+    Gera o relatório de receita do hotel para um período.
+
+    Args:
+        request (HttpRequest): Requisição HTTP.
+
+    Returns:
+        HttpResponse: Página com dados de receita agregada.
+    """
     today = date.today()
     start_date = today
     end_date = today
-
-    # Só usar datas do request se ambas start_date e end_date estiverem presentes e forem válidas
     if all(param in request.GET for param in ['start_date', 'end_date']):
         try:
             start_date = datetime.strptime(request.GET['start_date'], '%Y-%m-%d').date()
             end_date = datetime.strptime(request.GET['end_date'], '%Y-%m-%d').date()
         except (TypeError, ValueError):
-            pass  # Manter as datas padrão (hoje) se o parsing falhar
-    
-    # Buscar dados de receita do período especificado
-    query = Invoice.objects
-    if start_date == end_date:
-        # Se for um único dia, usar filtro exato
-        query = query.filter(issued_at__date=start_date)
-    else:
-        # Se for um período, usar range de datas
-        query = query.filter(issued_at__date__gte=start_date, issued_at__date__lte=end_date)
-    
-    revenue_data = (
-        query
-        .values('issued_at__date')
-        .annotate(
-            date=TruncDate('issued_at'),
-            total_amount=Sum('amount'),
-            paid_amount=Sum('amount', filter=Q(paid=True)),
-            pending_amount=Sum('amount', filter=Q(paid=False))
-        )
-        .order_by('issued_at__date')
-    )
-    
-    # Calcular totais do período
-    total_revenue = sum(day['total_amount'] or 0 for day in revenue_data)
-    total_paid = sum(day['paid_amount'] or 0 for day in revenue_data)
-    total_pending = sum(day['pending_amount'] or 0 for day in revenue_data)
-    
+            pass
+    revenue_data, total_revenue, total_paid, total_pending = calculate_revenue_data(start_date, end_date)
     context = {
         'start_date': start_date,
         'end_date': end_date,
@@ -103,10 +106,163 @@ def revenue_report(request):
     }
     return render(request, 'reports/revenue.html', context)
 
-def checkins_report(request):
+def checkins_report(request: HttpRequest) -> HttpResponse:
+    """
+    Gera o relatório de check-ins realizados.
+
+    Args:
+        request (HttpRequest): Requisição HTTP.
+
+    Returns:
+        HttpResponse: Página com lista de check-ins.
+    """
     checkins = CheckIn.objects.select_related('reservation').order_by('-check_in_time')
     
     context = {
         'checkins': checkins
     }
     return render(request, 'reports/checkins.html', context)
+
+def cash_flow_report(request: HttpRequest) -> HttpResponse:
+    """
+    Gera o relatório de fluxo de caixa do hotel, integrando receitas e despesas.
+
+    Args:
+        request (HttpRequest): Requisição HTTP.
+
+    Returns:
+        HttpResponse: Página com dados de fluxo de caixa.
+    """
+    today = date.today()
+    start_date = today - timedelta(days=30)  # Padrão: últimos 30 dias
+    end_date = today
+    
+    if all(param in request.GET for param in ['start_date', 'end_date']):
+        try:
+            start_date = datetime.strptime(request.GET['start_date'], '%Y-%m-%d').date()
+            end_date = datetime.strptime(request.GET['end_date'], '%Y-%m-%d').date()
+        except (TypeError, ValueError):
+            pass
+    
+    cash_flow_data = calculate_cash_flow_data(start_date, end_date)
+    
+    context = {
+        'start_date': start_date,
+        'end_date': end_date,
+        'cash_flow_data': cash_flow_data,
+        'daily_flow': cash_flow_data['daily_flow'],
+        'total_revenue': cash_flow_data['total_revenue'],
+        'total_paid': cash_flow_data['total_paid'],
+        'total_pending': cash_flow_data['total_pending'],
+        'total_expense': cash_flow_data['total_expense'],
+        'category_expenses': cash_flow_data['category_expenses'],
+        'net_profit': cash_flow_data['net_profit'],
+    }
+    
+    return render(request, 'reports/cash_flow.html', context)
+
+def financial_report(request: HttpRequest) -> HttpResponse:
+    """
+    Gera um relatório financeiro completo, mostrando todas as receitas e despesas do hotel
+    para um determinado período.
+
+    Args:
+        request (HttpRequest): Requisição HTTP com possíveis parâmetros de filtro.
+
+    Returns:
+        HttpResponse: Página de relatório financeiro detalhado.
+    """
+    # Define o período padrão: último mês até hoje
+    today = date.today()
+    default_start_date = today - timedelta(days=30)
+    
+    # Verifica se há parâmetros de filtro de data na requisição
+    start_date = default_start_date
+    end_date = today
+    
+    if all(param in request.GET for param in ['start_date', 'end_date']):
+        try:
+            start_date = datetime.strptime(request.GET['start_date'], '%Y-%m-%d').date()
+            end_date = datetime.strptime(request.GET['end_date'], '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            pass  # Em caso de erro, mantém as datas padrão
+    
+    # Obter dados de receita
+    revenue_data, total_revenue, total_paid, total_pending = calculate_revenue_data(start_date, end_date)
+    
+    # Obter dados de despesa
+    expense_data, total_expense, category_expenses = calculate_expense_data(start_date, end_date)
+    
+    # Calcular lucro líquido
+    net_profit = total_revenue - total_expense
+    
+    # Calcular margem de lucro (se houver receita)
+    profit_margin = (net_profit / total_revenue * 100) if total_revenue > 0 else 0
+    
+    # Calcular percentual de pagamentos recebidos e pendentes
+    payment_percentage = (total_paid / total_revenue * 100) if total_revenue > 0 else 0
+    pending_percentage = (total_pending / total_revenue * 100) if total_revenue > 0 else 0
+    
+    # Construir dados diários para o gráfico
+    daily_data = []
+    current_date = start_date
+    while current_date <= end_date:
+        date_str = current_date.strftime('%Y-%m-%d')
+        
+        # Encontrar receita deste dia
+        day_revenue = next((item for item in revenue_data if item['date'].strftime('%Y-%m-%d') == date_str), None)
+        
+        # Encontrar despesa deste dia
+        day_expense = next((item for item in expense_data if item['date'].strftime('%Y-%m-%d') == date_str), None)
+        
+        daily_data.append({
+            'date': current_date,
+            'revenue': float(day_revenue['total_amount']) if day_revenue else 0,
+            'expense': float(day_expense['total_amount']) if day_expense else 0
+        })
+        
+        current_date += timedelta(days=1)
+    
+    # Obter entradas de receita (faturas) para o período
+    revenue_entries = Invoice.objects.filter(
+        issued_at__date__gte=start_date,
+        issued_at__date__lte=end_date
+    ).select_related('reservation', 'reservation__room').order_by('-issued_at')
+    
+    # Formatar dados de faturas para o template
+    formatted_revenue_entries = []
+    for invoice in revenue_entries:
+        formatted_revenue_entries.append({
+            'id': invoice.id,
+            'date': invoice.issued_at.date(),
+            'amount': invoice.amount,
+            'paid': invoice.paid,
+            'guest_name': invoice.reservation.guest_name,
+            'room_number': invoice.reservation.room.number if invoice.reservation.room else 'N/A'
+        })
+    
+    # Obter entradas de despesa para o período
+    expense_entries = Expense.objects.filter(
+        payment_date__gte=start_date,
+        payment_date__lte=end_date
+    ).order_by('-payment_date')
+    
+    # Preparar o contexto
+    context = {
+        'start_date': start_date,
+        'end_date': end_date,
+        'total_revenue': total_revenue,
+        'total_expense': total_expense,
+        'total_paid': total_paid,
+        'total_pending': total_pending,
+        'net_profit': net_profit,
+        'profit_margin': profit_margin,
+        'payment_percentage': payment_percentage,
+        'pending_percentage': pending_percentage,
+        'daily_data': daily_data,
+        'revenue_entries': formatted_revenue_entries,
+        'expense_entries': expense_entries,
+        'category_expenses': category_expenses
+    }
+    
+    return render(request, 'reports/financial_report.html', context)

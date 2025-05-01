@@ -5,6 +5,8 @@ Configurações de produção para o projeto hotel_hms.
 import os
 from pathlib import Path
 from .settings import *  # Importa todas as configurações base
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 
 # SEGURANÇA
 # ------------------------------------------------------------------------------
@@ -117,3 +119,15 @@ MIDDLEWARE = [
 
 # Configuração do WhiteNoise para arquivos estáticos
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# SENTRY
+# ------------------------------------------------------------------------------
+# Configura o Sentry para captura de exceções e performance
+SENTRY_DSN = os.environ.get('SENTRY_DSN')
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration()],
+        traces_sample_rate=0.5,
+        send_default_pii=True,
+    )

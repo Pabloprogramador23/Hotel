@@ -5,8 +5,9 @@ from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.urls import reverse
+from django.utils import timezone
 
-from .models import Invoice, Payment
+from .models import Invoice, Payment, Expense
 from apps.reservations.models import Reservation
 
 @login_required
@@ -138,3 +139,137 @@ def reservation_invoices_view(request, reservation_id):
                 messages.info(request, 'Esta fatura já está paga.')
             return redirect(reverse('finance:reservation_invoices', args=[reservation_id]))
     return render(request, 'finance/invoice_list.html', {'reservation': reservation, 'invoices': invoices})
+
+@login_required
+def list_all_invoices_view(request):
+    """
+    Exibe todas as faturas em uma página HTML formatada
+    """
+    invoices = Invoice.objects.all().order_by('-issued_at')
+    
+    # Agrupar faturas por reserva para uma visualização melhor organizada
+    reservations = {}
+    for invoice in invoices:
+        if invoice.reservation_id not in reservations:
+            reservations[invoice.reservation_id] = {
+                'reservation': invoice.reservation,
+                'invoices': [],
+                'total_amount': 0  # Inicializa o total
+            }
+        reservations[invoice.reservation_id]['invoices'].append(invoice)
+        # Soma o valor ao total da reserva
+        reservations[invoice.reservation_id]['total_amount'] += float(invoice.amount)
+    
+    context = {
+        'reservations': reservations.values(),
+        'total_value': sum(float(invoice.amount) for invoice in invoices),
+        'total_paid': sum(float(invoice.amount) for invoice in invoices if invoice.paid),
+        'total_pending': sum(float(invoice.amount) for invoice in invoices if not invoice.paid),
+    }
+    
+    return render(request, 'finance/all_invoices.html', context)
+
+@login_required
+def expense_list(request):
+    """
+    Exibe todas as despesas registradas
+    """
+    expenses = Expense.objects.all()
+    
+    # Filtros
+    category = request.GET.get('category')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    
+    if category and category != 'all':
+        expenses = expenses.filter(category=category)
+    
+    if start_date:
+        expenses = expenses.filter(payment_date__gte=start_date)
+    
+    if end_date:
+        expenses = expenses.filter(payment_date__lte=end_date)
+    
+    # Totais por categoria
+    category_totals = {}
+    for category_code, category_name in Expense.CATEGORY_CHOICES:
+        category_sum = sum(expense.amount for expense in expenses.filter(category=category_code))
+        category_totals[category_code] = {
+            'name': category_name,
+            'total': category_sum
+        }
+    
+    total_expenses = sum(expense.amount for expense in expenses)
+    
+    context = {
+        'expenses': expenses,
+        'category_totals': category_totals,
+        'total_expenses': total_expenses,
+        'categories': Expense.CATEGORY_CHOICES,
+        'selected_category': category or 'all',
+        'start_date': start_date,
+        'end_date': end_date
+    }
+    
+    return render(request, 'finance/expense_list.html', context)
+
+@login_required
+def create_expense(request):
+    """
+    Cria um novo registro de despesa
+    """
+    if request.method == 'POST':
+        try:
+            description = request.POST.get('description')
+            amount = request.POST.get('amount')
+            category = request.POST.get('category')
+            payment_date = request.POST.get('payment_date') or timezone.now().date()
+            payment_method = request.POST.get('payment_method')
+            notes = request.POST.get('notes', '')
+            
+            # Validações básicas
+            if not description or not amount or not payment_method:
+                messages.error(request, 'Preencha todos os campos obrigatórios')
+                return redirect('finance:expense_list')
+            
+            # Processar o upload do comprovante, se fornecido
+            receipt = None
+            if 'receipt' in request.FILES:
+                receipt = request.FILES['receipt']
+            
+            # Criar a despesa
+            expense = Expense.objects.create(
+                description=description,
+                amount=amount,
+                category=category,
+                payment_date=payment_date,
+                payment_method=payment_method,
+                receipt=receipt,
+                notes=notes
+            )
+            
+            messages.success(request, f'Despesa "{description}" registrada com sucesso!')
+            return redirect('finance:expense_list')
+            
+        except Exception as e:
+            messages.error(request, f'Erro ao registrar despesa: {str(e)}')
+            return redirect('finance:expense_list')
+    
+    # Se for GET, renderiza o formulário na própria página de listagem
+    return redirect('finance:expense_list')
+
+@login_required
+def delete_expense(request, expense_id):
+    """
+    Exclui um registro de despesa
+    """
+    if request.method == 'POST':
+        try:
+            expense = get_object_or_404(Expense, id=expense_id)
+            description = expense.description
+            expense.delete()
+            messages.success(request, f'Despesa "{description}" excluída com sucesso!')
+        except Exception as e:
+            messages.error(request, f'Erro ao excluir despesa: {str(e)}')
+    
+    return redirect('finance:expense_list')

@@ -1,15 +1,20 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
+from django.core.paginator import Paginator
 from .models import SystemSetting
 
 @login_required
 @permission_required('settings_manager.view_systemsetting')
 def settings_list(request):
     """View para listar todas as configurações do sistema."""
-    settings = SystemSetting.objects.all().order_by('key')
+    settings_qs = SystemSetting.objects.all().order_by('key')
+    paginator = Paginator(settings_qs, 20)  # 20 por página
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
     return render(request, 'settings_manager/list.html', {
-        'settings': settings,
+        'settings': page_obj.object_list,
+        'page_obj': page_obj,
         'title': 'Configurações do Sistema'
     })
 
