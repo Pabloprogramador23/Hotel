@@ -14,6 +14,8 @@ dependencies = [
     "gunicorn>=21.2.0",          # Servidor WSGI para produção
     "python-dotenv>=1.0.0",      # Para gerenciar variáveis de ambiente
     "redis>=5.0.0",              # Para cache em produção
+    "djangorestframework>=3.15.0",  # API REST
+    "djangorestframework-simplejwt>=5.3.1",  # Autenticação JWT
 ]
 
 [build-system]

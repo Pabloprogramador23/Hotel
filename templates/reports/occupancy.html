@@ -1,62 +1,206 @@
 {% extends 'reports/base_reports.html' %}
 {% load static %}
 
-{% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% block title %}Relatório de Ocupação - Sistema Hotel{% endblock %}
+
+{% block report_title %}Relatório de Ocupação{% endblock %}
+
+{% block report_actions %}
+<div class="btn-group">
+    <button type="button" class="btn btn-sm btn-outline-primary" onclick="printReport()">
+        <i class="fas fa-print me-1"></i> Imprimir
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-success" onclick="exportToPDF()">
+        <i class="fas fa-file-pdf me-1"></i> Exportar PDF
+    </button>
+</div>
+{% endblock %}
+
+{% block report_filters %}
+<div class="alert alert-info mb-4">
+    <i class="fas fa-info-circle me-2"></i>
+    Este relatório mostra os dados de ocupação atuais e tendências dos últimos 7 dias.
+</div>
 {% endblock %}
 
 {% block report_content %}
-<div class="card mb-4">
-    <div class="card-header">
-        <h2>Visão Geral da Ocupação</h2>
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <h5 class="card-title text-muted">Total de Quartos</h5>
+                <h2 class="display-4">{{ total_rooms }}</h2>
+            </div>
+        </div>
     </div>
-    <div class="card-body">
-        <canvas id="occupancyChart"></canvas>
+    
+    <div class="col-md-4">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <h5 class="card-title text-muted">Quartos Ocupados</h5>
+                <h2 class="display-4">{{ occupied_rooms }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <h5 class="card-title text-muted">Taxa de Ocupação</h5>
+                <h2 class="display-4">{{ occupancy_rate }}%</h2>
+            </div>
+        </div>
     </div>
 </div>
 
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Ocupação por Tipo de Quarto</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="roomTypeChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Tendência de Check-ins (Últimos 7 dias)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="checkinTrendChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Detalhes por Tipo de Quarto</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Tipo de Quarto</th>
+                                <th>Total de Quartos</th>
+                                <th>Quartos Ocupados</th>
+                                <th>Taxa de Ocupação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in room_type_stats %}
+                            <tr>
+                                <td>{{ stat.room_type|default:"Não especificado" }}</td>
+                                <td>{{ stat.total }}</td>
+                                <td>{{ stat.occupied }}</td>
+                                <td>{{ stat.occupied|floatformat:0 }}% ({{ stat.occupied }}/{{ stat.total }})</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block report_footer %}
+<div class="text-end">
+    <small class="text-muted">Data do relatório: {% now "d/m/Y H:i" %}</small>
+</div>
+{% endblock %}
+
+{% block report_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    if (typeof Chart === 'undefined') {
-        console.error('Chart.js não foi carregado corretamente. Verifique o link da biblioteca.');
-        return;
-    }
-
-    const ctx = document.getElementById('occupancyChart').getContext('2d');
-    const data = {
-        labels: [{% for stat in room_type_stats %}'{{ stat.room_type|default:"Não especificado" }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
-        datasets: [
-            {
-                label: 'Quartos Ocupados',
-                data: [{% for stat in room_type_stats %}{{ stat.occupied }}{% if not forloop.last %}, {% endif %}{% endfor %}],
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1
-            }
-        ]
-    };
-
-    new Chart(ctx, {
+    // Gráfico de ocupação por tipo de quarto
+    const roomTypeCtx = document.getElementById('roomTypeChart').getContext('2d');
+    new Chart(roomTypeCtx, {
         type: 'bar',
-        data: data,
+        data: {
+            labels: [{% for stat in room_type_stats %}'{{ stat.room_type|default:"Não especificado" }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            datasets: [
+                {
+                    label: 'Total de Quartos',
+                    data: [{% for stat in room_type_stats %}{{ stat.total }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Quartos Ocupados',
+                    data: [{% for stat in room_type_stats %}{{ stat.occupied }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
         options: {
             responsive: true,
             plugins: {
                 legend: {
-                    display: false
+                    position: 'top',
                 },
                 title: {
-                    display: true,
-                    text: 'Ocupação por Tipo de Quarto'
+                    display: false,
                 }
+            }
+        }
+    });
+    
+    // Gráfico de tendência de check-ins
+    const checkinTrendCtx = document.getElementById('checkinTrendChart').getContext('2d');
+    new Chart(checkinTrendCtx, {
+        type: 'line',
+        data: {
+            labels: [{% for day in occupancy_trend %}'{{ day.date|date:"d/m" }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            datasets: [
+                {
+                    label: 'Número de Check-ins',
+                    data: [{% for day in occupancy_trend %}{{ day.checkins }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
             },
             scales: {
                 y: {
-                    beginAtZero: true
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
                 }
             }
         }
     });
 });
+
+function printReport() {
+    window.print();
+}
+
+function exportToPDF() {
+    alert('Funcionalidade de exportação para PDF será implementada em breve.');
+}
 </script>
 {% endblock %}

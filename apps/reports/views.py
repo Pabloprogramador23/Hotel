@@ -146,6 +146,15 @@ def cash_flow_report(request: HttpRequest) -> HttpResponse:
     
     cash_flow_data = calculate_cash_flow_data(start_date, end_date)
     
+    # Calcular percentual de pagamentos recebidos e pendentes
+    total_revenue = cash_flow_data['total_revenue']
+    total_paid = cash_flow_data['total_paid']
+    total_pending = cash_flow_data['total_pending']
+    
+    # Calcular percentuais para a barra de progresso
+    paid_percentage = round((total_paid / total_revenue * 100) if total_revenue > 0 else 0)
+    pending_percentage = round((total_pending / total_revenue * 100) if total_revenue > 0 else 0)
+    
     context = {
         'start_date': start_date,
         'end_date': end_date,
@@ -157,6 +166,8 @@ def cash_flow_report(request: HttpRequest) -> HttpResponse:
         'total_expense': cash_flow_data['total_expense'],
         'category_expenses': cash_flow_data['category_expenses'],
         'net_profit': cash_flow_data['net_profit'],
+        'paid_percentage': paid_percentage,
+        'pending_percentage': pending_percentage,
     }
     
     return render(request, 'reports/cash_flow.html', context)
@@ -266,3 +277,142 @@ def financial_report(request: HttpRequest) -> HttpResponse:
     }
     
     return render(request, 'reports/financial_report.html', context)
+
+def financial_consolidated_report(request: HttpRequest) -> HttpResponse:
+    """
+    Gera um relatório financeiro consolidado que compara receitas ganhas e recebidas,
+    para fornecer uma visão clara da saúde financeira e lucratividade do hotel.
+
+    Args:
+        request (HttpRequest): Requisição HTTP com possíveis parâmetros de filtro de data.
+
+    Returns:
+        HttpResponse: Página de relatório financeiro consolidado.
+    """
+    # Define o período padrão: último mês até hoje
+    today = date.today()
+    default_start_date = today - timedelta(days=30)
+    
+    # Verifica se há parâmetros de filtro de data na requisição
+    start_date = default_start_date
+    end_date = today
+    
+    if all(param in request.GET for param in ['start_date', 'end_date']):
+        try:
+            start_date = datetime.strptime(request.GET['start_date'], '%Y-%m-%d').date()
+            end_date = datetime.strptime(request.GET['end_date'], '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            pass
+    
+    # Obter dados de receita usando o serviço existente
+    revenue_data, total_revenue, revenue_received, revenue_pending = calculate_revenue_data(start_date, end_date)
+    
+    # Obter dados de despesa usando o serviço existente
+    expense_data, total_expenses, category_expenses = calculate_expense_data(start_date, end_date)
+    
+    # Calcular lucro líquido
+    net_profit = revenue_received - total_expenses  # Usamos apenas a receita efetivamente recebida
+    
+    # Calcular percentuais
+    percentage_received = (revenue_received / total_revenue * 100) if total_revenue > 0 else 0
+    percentage_pending = (revenue_pending / total_revenue * 100) if total_revenue > 0 else 0
+    profit_margin = (net_profit / revenue_received * 100) if revenue_received > 0 else 0
+    expense_to_revenue_ratio = (total_expenses / revenue_received * 100) if revenue_received > 0 else 0
+    
+    # Construir dados diários para análise detalhada e gráficos
+    daily_data = []
+    date_range = (end_date - start_date).days + 1
+    
+    # Mapear dados de receita por data
+    revenue_by_date = {item['date'].strftime('%Y-%m-%d'): {
+        'total': float(item['total_amount'] or 0),
+        'paid': float(item['paid_amount'] or 0),
+        'pending': float(item['pending_amount'] or 0)
+    } for item in revenue_data}
+    
+    # Mapear dados de despesa por data
+    expense_by_date = {item['date'].strftime('%Y-%m-%d'): float(item['total_amount'] or 0) 
+                      for item in expense_data}
+    
+    # Construir dataset completo com todos os dias no período
+    for i in range(date_range):
+        current_date = start_date + timedelta(days=i)
+        date_str = current_date.strftime('%Y-%m-%d')
+        
+        # Obter dados de receita para este dia (ou zeros se não houver)
+        day_revenue = revenue_by_date.get(date_str, {'total': 0, 'paid': 0, 'pending': 0})
+        
+        # Obter dados de despesa para este dia (ou zero se não houver)
+        day_expense = expense_by_date.get(date_str, 0)
+        
+        # Calcular lucro do dia (usando apenas receita recebida)
+        day_profit = day_revenue['paid'] - day_expense
+        
+        # Calcular margem de lucro do dia
+        day_margin = (day_profit / day_revenue['paid'] * 100) if day_revenue['paid'] > 0 else 0
+        
+        daily_data.append({
+            'date': current_date,
+            'revenue': day_revenue['total'],
+            'revenue_paid': day_revenue['paid'],
+            'revenue_pending': day_revenue['pending'],
+            'expense': day_expense,
+            'profit': day_profit,
+            'margin': day_margin
+        })
+    
+    # Ordenar dados por data
+    daily_data.sort(key=lambda x: x['date'])
+    
+    # Calcular ticket médio (valor médio das faturas)
+    invoice_count = Invoice.objects.filter(
+        issued_at__date__gte=start_date,
+        issued_at__date__lte=end_date
+    ).count()
+    
+    avg_invoice_value = total_revenue / invoice_count if invoice_count > 0 else 0
+    
+    # Obter faturas recentes para exibição na tabela
+    recent_invoices = Invoice.objects.select_related('reservation').filter(
+        issued_at__date__gte=start_date,
+        issued_at__date__lte=end_date
+    ).order_by('-issued_at')[:10]  # Limitar a 10 faturas mais recentes
+    
+    # Formatar dados de faturas para o template
+    formatted_invoices = []
+    for invoice in recent_invoices:
+        formatted_invoices.append({
+            'id': invoice.id,
+            'date': invoice.issued_at.date(),
+            'guest_name': invoice.reservation.guest_name if invoice.reservation else 'N/A',
+            'amount': invoice.amount,
+            'paid': invoice.paid,
+        })
+    
+    # Obter despesas recentes para exibição na tabela
+    recent_expenses = Expense.objects.filter(
+        payment_date__gte=start_date,
+        payment_date__lte=end_date
+    ).order_by('-payment_date')[:10]  # Limitar a 10 despesas mais recentes
+    
+    # Preparar o contexto para o template
+    context = {
+        'start_date': start_date,
+        'end_date': end_date,
+        'total_revenue': total_revenue,
+        'revenue_received': revenue_received,
+        'revenue_pending': revenue_pending,
+        'total_expenses': total_expenses,
+        'net_profit': net_profit,
+        'profit_margin': profit_margin,
+        'percentage_received': percentage_received,
+        'percentage_pending': percentage_pending,
+        'expense_to_revenue_ratio': expense_to_revenue_ratio,
+        'avg_invoice_value': avg_invoice_value,
+        'daily_data': daily_data,
+        'recent_invoices': formatted_invoices,
+        'recent_expenses': recent_expenses,
+        'category_expenses': category_expenses
+    }
+    
+    return render(request, 'reports/financial_consolidated.html', context)

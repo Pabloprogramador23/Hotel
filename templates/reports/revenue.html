@@ -1,163 +1,284 @@
 {% extends 'reports/base_reports.html' %}
 {% load static %}
 
-{% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% block title %}Relatório de Receitas - Sistema Hotel{% endblock %}
+
+{% block report_title %}Relatório de Receitas{% endblock %}
+
+{% block report_actions %}
+<div class="btn-group">
+    <button type="button" class="btn btn-sm btn-outline-primary" onclick="printReport()">
+        <i class="fas fa-print me-1"></i> Imprimir
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-success" onclick="exportToPDF()">
+        <i class="fas fa-file-pdf me-1"></i> Exportar PDF
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="exportToCSV()">
+        <i class="fas fa-file-csv me-1"></i> Exportar CSV
+    </button>
+</div>
+{% endblock %}
+
+{% block report_filters %}
+<form method="get" class="row g-3 mb-4">
+    <div class="col-md-4">
+        <label for="start_date" class="form-label">Data Inicial</label>
+        <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+        </div>
+    </div>
+    <div class="col-md-4">
+        <label for="end_date" class="form-label">Data Final</label>
+        <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
+        </div>
+    </div>
+    <div class="col-md-4 d-flex align-items-end">
+        <button type="submit" class="btn btn-primary w-100">
+            <i class="fas fa-filter me-2"></i>Filtrar Dados
+        </button>
+    </div>
+</form>
+
+<div class="alert alert-info mb-4">
+    <i class="fas fa-info-circle me-2"></i>
+    Exibindo dados de receita para o período de <strong>{{ start_date|date:"d/m/Y" }}</strong> até <strong>{{ end_date|date:"d/m/Y" }}</strong>
+</div>
 {% endblock %}
 
 {% block report_content %}
-<div class="card mb-4">
-    <div class="card-header">
-        <h2>Relatório de Receita</h2>
-    </div>
-    <div class="card-body">
-        <form method="get" class="mb-4">
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <label for="start_date" class="form-label">Data Inicial</label>
-                    <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
-                </div>
-                <div class="col-md-4">
-                    <label for="end_date" class="form-label">Data Final</label>
-                    <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
-                </div>
-                <div class="col-md-4 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary">Filtrar</button>
-                </div>
-            </div>
-        </form>
-
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Receita Total</h5>
-                        <p class="display-4">R$ {{ total_revenue|floatformat:2 }}</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Receita Paga</h5>
-                        <p class="display-4">R$ {{ total_paid|floatformat:2 }}</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Receita Pendente</h5>
-                        <p class="display-4">R$ {{ total_pending|floatformat:2 }}</p>
-                    </div>
-                </div>
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-center h-100 revenue-card total">
+            <div class="card-body">
+                <h5 class="card-title text-muted">Receita Total</h5>
+                <h2 class="display-4">R$ {{ total_revenue|floatformat:2 }}</h2>
+                <p class="card-text text-muted">Total para o período selecionado</p>
             </div>
         </div>
-
-        <div class="row">
-            <div class="col-md-12 mb-4">
-                <div class="card">
-                    <div class="card-header">
-                        <h3>Receita ao Longo do Tempo</h3>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="revenueChart"></canvas>
-                    </div>
-                </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card text-center h-100 revenue-card paid">
+            <div class="card-body">
+                <h5 class="card-title text-muted">Receita Paga</h5>
+                <h2 class="display-4 text-success">R$ {{ total_paid|floatformat:2 }}</h2>
+                <p class="card-text text-muted">{{ total_paid|floatformat:2 }} de {{ total_revenue|floatformat:2 }}</p>
             </div>
-
-            <div class="col-md-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h3>Detalhes Diários da Receita</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Data</th>
-                                        <th>Receita Total</th>
-                                        <th>Paga</th>
-                                        <th>Pendente</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for day in revenue_data %}
-                                    <tr>
-                                        <td>{{ day.date|date:"d/m/Y" }}</td>
-                                        <td>R$ {{ day.total_amount|default:0|floatformat:2 }}</td>
-                                        <td>R$ {{ day.paid_amount|default:0|floatformat:2 }}</td>
-                                        <td>R$ {{ day.pending_amount|default:0|floatformat:2 }}</td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="4" class="text-center">Nenhum dado de receita disponível para este período.</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card text-center h-100 revenue-card pending">
+            <div class="card-body">
+                <h5 class="card-title text-muted">Receita Pendente</h5>
+                <h2 class="display-4 text-warning">R$ {{ total_pending|floatformat:2 }}</h2>
+                <p class="card-text text-muted">{{ total_pending|floatformat:2 }} de {{ total_revenue|floatformat:2 }}</p>
             </div>
         </div>
     </div>
 </div>
 
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Tendências de Receita ao Longo do Tempo</h5>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-dark" onclick="changeChartType('line')">Linha</button>
+                    <button type="button" class="btn btn-outline-dark" onclick="changeChartType('bar')">Barra</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="revenueChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Detalhes Diários da Receita</h5>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="showOnlyWithRevenue">
+                    <label class="form-check-label" for="showOnlyWithRevenue">Mostrar apenas dias com receita</label>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0" id="revenueTable">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th class="text-end">Receita Total</th>
+                                <th class="text-end">Receita Paga</th>
+                                <th class="text-end">Receita Pendente</th>
+                                <th class="text-end">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for day in revenue_data %}
+                            <tr class="{% if day.total_amount == 0 %}zero-revenue{% endif %}">
+                                <td>{{ day.date|date:"d/m/Y (D)" }}</td>
+                                <td class="text-end">R$ {{ day.total_amount|default:0|floatformat:2 }}</td>
+                                <td class="text-end">R$ {{ day.paid_amount|default:0|floatformat:2 }}</td>
+                                <td class="text-end">R$ {{ day.pending_amount|default:0|floatformat:2 }}</td>
+                                <td class="text-end">
+                                    {% if day.pending_amount > 0 %}
+                                    <span class="badge bg-warning">Pagamento Pendente</span>
+                                    {% elif day.paid_amount > 0 %}
+                                    <span class="badge bg-success">Totalmente Pago</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Sem Receita</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4">
+                                    <i class="fas fa-info-circle me-2 text-muted"></i>
+                                    Nenhum dado de receita disponível para este período.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-dark fw-bold">
+                                <td>Total:</td>
+                                <td class="text-end">R$ {{ total_revenue|floatformat:2 }}</td>
+                                <td class="text-end">R$ {{ total_paid|floatformat:2 }}</td>
+                                <td class="text-end">R$ {{ total_pending|floatformat:2 }}</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block report_footer %}
+<div class="text-end">
+    <small class="text-muted">Período do relatório: {{ start_date|date:"d/m/Y" }} - {{ end_date|date:"d/m/Y" }}</small>
+</div>
+{% endblock %}
+
+{% block report_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    let revenueChart;
     const ctx = document.getElementById('revenueChart').getContext('2d');
-    const data = {
-        labels: [{% for day in revenue_data %}'{{ day.date|date:"d/m/Y" }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+    
+    // Dados do gráfico
+    const chartData = {
+        labels: [{% for day in revenue_data %}'{{ day.date|date:"d/m" }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
         datasets: [
             {
                 label: 'Receita Total',
                 data: [{% for day in revenue_data %}{{ day.total_amount|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}],
-                borderColor: 'rgb(75, 192, 192)',
-                tension: 0.1,
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 2,
+                tension: 0.3,
                 fill: false
             },
             {
                 label: 'Receita Paga',
                 data: [{% for day in revenue_data %}{{ day.paid_amount|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}],
-                borderColor: 'rgb(54, 162, 235)',
-                tension: 0.1,
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 2,
+                tension: 0.3,
                 fill: false
             },
             {
                 label: 'Receita Pendente',
                 data: [{% for day in revenue_data %}{{ day.pending_amount|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}],
-                borderColor: 'rgb(255, 99, 132)',
-                tension: 0.1,
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 2,
+                tension: 0.3,
                 fill: false
             }
         ]
     };
-
-    new Chart(ctx, {
-        type: 'line',
-        data: data,
-        options: {
-            responsive: true,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Tendências de Receita'
-                }
+    
+    // Opções do gráfico
+    const chartOptions = {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'top',
             },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return 'R$ ' + value.toFixed(2);
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        let label = context.dataset.label || '';
+                        if (label) {
+                            label += ': ';
                         }
+                        label += 'R$ ' + parseFloat(context.raw).toFixed(2);
+                        return label;
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return 'R$ ' + value.toFixed(2);
                     }
                 }
             }
         }
+    };
+    
+    // Criação inicial do gráfico como linha
+    revenueChart = new Chart(ctx, {
+        type: 'line',
+        data: chartData,
+        options: chartOptions
+    });
+    
+    // Função para mudar o tipo de gráfico
+    window.changeChartType = function(type) {
+        revenueChart.destroy();
+        revenueChart = new Chart(ctx, {
+            type: type,
+            data: chartData,
+            options: chartOptions
+        });
+    };
+    
+    // Filtro da tabela - mostrar apenas dias com receita
+    const checkbox = document.getElementById('showOnlyWithRevenue');
+    checkbox.addEventListener('change', function() {
+        const rows = document.querySelectorAll('#revenueTable tbody tr.zero-revenue');
+        rows.forEach(row => {
+            row.style.display = this.checked ? 'none' : '';
+        });
     });
 });
+
+function printReport() {
+    window.print();
+}
+
+function exportToPDF() {
+    alert('Funcionalidade de exportação para PDF será implementada em breve.');
+}
+
+function exportToCSV() {
+    alert('Funcionalidade de exportação para CSV será implementada em breve.');
+}
 </script>
 {% endblock %}

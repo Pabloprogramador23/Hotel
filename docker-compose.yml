@@ -1,0 +1,98 @@
+services:
+  # Serviço principal do Django
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        DJANGO_ENV: ${DJANGO_ENV:-production}
+    restart: always
+    volumes:
+      - static_data:/app/staticfiles
+      - media_data:/app/media
+    environment:
+      # Configurações do Django
+      - DEBUG=${DEBUG:-False}
+      - SECRET_KEY=${SECRET_KEY}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      
+      # Configurações do Banco de Dados
+      - DB_ENGINE=${DB_ENGINE:-django.db.backends.postgresql}
+      - DB_NAME=${DB_NAME:-hotel_db}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_HOST=db
+      - DB_PORT=5432
+      
+      # Configurações de Email
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL}
+      
+      # Configurações de Cache
+      - REDIS_URL=redis://redis:6379/1
+      
+      # Outras configurações
+      - DJANGO_SETTINGS_MODULE=hotel_hms.settings_prod
+      - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME}
+      - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD}
+      - DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL}
+      
+      # Sentry (opcional)
+      - SENTRY_DSN=${SENTRY_DSN}
+    depends_on:
+      - db
+      - redis
+    networks:
+      - hotel_network
+
+  # Banco de dados PostgreSQL
+  db:
+    image: postgres:15
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${DB_NAME:-hotel_db}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    networks:
+      - hotel_network
+
+  # Cache com Redis
+  redis:
+    image: redis:7
+    restart: always
+    volumes:
+      - redis_data:/data
+    networks:
+      - hotel_network
+
+  # Nginx como servidor de proxy reverso
+  nginx:
+    image: nginx:1.25
+    restart: always
+    ports:
+      - "${NGINX_PORT:-80}:80"
+      - "${NGINX_SSL_PORT:-443}:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/ssl:/etc/nginx/ssl
+      - static_data:/var/www/static
+      - media_data:/var/www/media
+    depends_on:
+      - web
+    networks:
+      - hotel_network
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_data:
+  media_data:
+
+networks:
+  hotel_network:
+    driver: bridge

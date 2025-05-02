@@ -67,7 +67,7 @@ def create_invoice(request, reservation_id):
 @require_POST
 def mark_invoice_paid(request, invoice_id):
     """
-    Marca uma fatura como paga
+    Adiciona um pagamento completo para uma fatura
     """
     try:
         with transaction.atomic():
@@ -79,12 +79,20 @@ def mark_invoice_paid(request, invoice_id):
                     'message': 'Esta fatura já está paga'
                 }, status=400)
                 
-            invoice.paid = True
-            invoice.save()
+            # Ao invés de marcar diretamente como paga, criamos um pagamento
+            # que cobre o valor total da fatura
+            Payment.objects.create(
+                invoice=invoice,
+                amount=invoice.amount,
+                method='Sistema',
+                notes='Pagamento completo via botão "Marcar como Paga"'
+            )
+            
+            # O status da fatura será atualizado automaticamente pelo método save() do Payment
             
             return JsonResponse({
                 'success': True,
-                'message': 'Fatura marcada como paga com sucesso'
+                'message': 'Pagamento registrado e fatura atualizada com sucesso'
             })
             
     except Exception as e:
@@ -129,12 +137,22 @@ def reservation_invoices_view(request, reservation_id):
                 messages.error(request, f'Erro ao criar fatura extra: {e}')
             return redirect(reverse('finance:reservation_invoices', args=[reservation_id]))
         else:
+            # Mudança aqui: ao invés de marcar diretamente como paga,
+            # registramos um pagamento completo
             invoice_id = request.POST.get('invoice_id')
             invoice = get_object_or_404(Invoice, id=invoice_id, reservation=reservation)
             if not invoice.paid:
-                invoice.paid = True
-                invoice.save()
-                messages.success(request, 'Fatura marcada como paga!')
+                try:
+                    # Criar um pagamento que cobre o valor total da fatura
+                    Payment.objects.create(
+                        invoice=invoice,
+                        amount=invoice.amount,
+                        method='Sistema',
+                        notes='Pagamento completo via botão "Marcar como Paga"'
+                    )
+                    messages.success(request, 'Pagamento registrado e fatura atualizada com sucesso!')
+                except Exception as e:
+                    messages.error(request, f'Erro ao processar pagamento: {e}')
             else:
                 messages.info(request, 'Esta fatura já está paga.')
             return redirect(reverse('finance:reservation_invoices', args=[reservation_id]))

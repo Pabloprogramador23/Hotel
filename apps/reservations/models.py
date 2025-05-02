@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.exceptions import ValidationError
+from apps.settings_manager.models import SystemSetting
 
 # Create your models here.
 
@@ -41,8 +42,17 @@ class Reservation(models.Model):
         # Executar validações
         self.clean()
         
-        # Verificar sobreposições apenas para reservas não canceladas
-        if self.status not in ['cancelled', 'checked_out']:
+        # Verificar se o overbooking está permitido nas configurações
+        allow_overbooking = False
+        try:
+            setting = SystemSetting.objects.get(key="allow_overbooking")
+            allow_overbooking = setting.value.lower() == 'true'
+        except SystemSetting.DoesNotExist:
+            # Se a configuração não existir, assume-se que não é permitido
+            pass
+        
+        # Se o overbooking não estiver permitido, verificar sobreposições
+        if not allow_overbooking and self.status not in ['cancelled', 'checked_out']:
             overlapping_reservations = Reservation.objects.filter(
                 room=self.room,
                 check_in_date__lt=self.check_out_date,

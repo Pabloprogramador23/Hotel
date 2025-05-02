@@ -1,0 +1,225 @@
+/* Estilos específicos para o módulo de relatórios */
+
+/* Cabeçalho e navegação de relatórios */
+.reports-title {
+    color: #2c3e50;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #eaeaea;
+}
+
+.reports-nav {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.reports-nav .nav-link {
+    color: #495057;
+    padding: 0.75rem 1rem;
+    font-weight: 500;
+}
+
+.reports-nav .nav-link i {
+    margin-right: 0.5rem;
+}
+
+.reports-nav .nav-link.active {
+    background-color: #3498db;
+    color: #fff;
+    font-weight: 600;
+}
+
+/* Cards de relatórios */
+.reports-card {
+    border: none;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    margin-bottom: 2rem;
+}
+
+.reports-card .card-header {
+    background-color: #fff;
+    border-bottom: 1px solid #f0f0f0;
+    padding: 1.25rem 1.5rem;
+}
+
+.reports-card .card-body {
+    padding: 1.5rem;
+}
+
+.reports-card-title {
+    font-size: 1.3rem;
+    color: #345;
+    font-weight: 600;
+    margin-bottom: 0;
+}
+
+/* Cartões de relatórios na página de lista */
+.report-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 1px solid #e9ecef;
+}
+
+.report-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+    border-color: #ddd;
+}
+
+.report-card.selected {
+    border: 2px solid #3498db;
+    box-shadow: 0 8px 15px rgba(52, 152, 219, 0.15);
+}
+
+.report-card.featured-report {
+    border: 2px solid #3498db;
+    background-color: #f8fdff;
+}
+
+.report-card .card-title {
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+/* Ribbon para indicar novo relatório */
+.ribbon {
+    width: 130px;
+    height: 130px;
+    overflow: hidden;
+    position: absolute;
+}
+
+.ribbon::before, .ribbon::after {
+    position: absolute;
+    z-index: -1;
+    content: '';
+    display: block;
+}
+
+.ribbon span {
+    position: absolute;
+    display: block;
+    width: 160px;
+    padding: 8px 0;
+    background-color: #3498db;
+    box-shadow: 0 5px 10px rgba(0,0,0,.1);
+    color: #fff;
+    font: 700 12px/1 'Lato', sans-serif;
+    text-shadow: 0 1px 1px rgba(0,0,0,.2);
+    text-transform: uppercase;
+    text-align: center;
+}
+
+.ribbon-top-right {
+    top: -10px;
+    right: -10px;
+}
+
+.ribbon-top-right::before, .ribbon-top-right::after {
+    border-top-color: transparent;
+    border-right-color: transparent;
+}
+
+.ribbon-top-right::before {
+    top: 0;
+    left: 0;
+}
+
+.ribbon-top-right::after {
+    bottom: 0;
+    right: 0;
+}
+
+.ribbon-top-right span {
+    left: -10px;
+    top: 30px;
+    transform: rotate(45deg);
+}
+
+/* Cards de métricas */
+.revenue-card .card-body, 
+.occupancy-card .card-body {
+    padding: 1.25rem;
+}
+
+.revenue-card .display-4,
+.occupancy-card .display-4 {
+    font-weight: 600;
+    font-size: 2.5rem;
+    margin: 1rem 0;
+}
+
+.revenue-card.total {
+    background-color: #f0f8ff;
+}
+
+.revenue-card.paid {
+    background-color: #f0fff4;
+}
+
+.revenue-card.pending {
+    background-color: #fffaf0;
+}
+
+/* Filtros e formulários */
+.report-filters form {
+    background-color: #f8f9fa;
+    padding: 1.25rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Tabelas de dados */
+.table thead th {
+    background-color: #f8f9fa;
+    color: #495057;
+    font-weight: 600;
+    border-top: none;
+}
+
+/* Estilos de impressão */
+@media print {
+    .reports-nav, 
+    .btn-group, 
+    .alert-info,
+    .form-group,
+    form,
+    .no-print {
+        display: none !important;
+    }
+    
+    .reports-card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+    
+    .card {
+        break-inside: avoid;
+    }
+    
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+    
+    th, td {
+        padding: 0.5rem !important;
+    }
+}
+
+/* Badges e indicadores de status */
+.badge.bg-success {
+    background-color: #28a745 !important;
+}
+
+.badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #212529 !important;
+}
+
+.badge.bg-secondary {
+    background-color: #6c757d !important;
+}

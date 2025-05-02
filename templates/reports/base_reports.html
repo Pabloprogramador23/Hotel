@@ -1,19 +1,71 @@
 {% extends 'base.html' %}
 
+{% block title %}Relatórios - {{ report_title|default:"Sistema Hotel" }}{% endblock %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="/static/css/reports.css">
+{% endblock %}
+
 {% block content %}
-<div class="container">
-    <nav class="nav nav-pills mb-3">
-        <a class="nav-link {% if request.resolver_match.url_name == 'occupancy' %}active{% endif %}" 
-           href="{% url 'reports:occupancy' %}">Occupancy Report</a>
-        <a class="nav-link {% if request.resolver_match.url_name == 'revenue' %}active{% endif %}" 
-           href="{% url 'reports:revenue' %}">Revenue Report</a>
-        <a class="nav-link {% if request.resolver_match.url_name == 'checkins' %}active{% endif %}" 
-           href="{% url 'reports:checkins' %}">Check-ins Report</a>
-        <a class="nav-link {% if request.resolver_match.url_name == 'cash_flow' %}active{% endif %}" 
-           href="{% url 'reports:cash_flow' %}">Cash Flow Report</a>
-        <a class="nav-link {% if request.resolver_match.url_name == 'financial_report' %}active{% endif %}" 
-           href="{% url 'reports:financial_report' %}">Relatório Financeiro Detalhado</a>
-    </nav>
-    {% block report_content %}{% endblock %}
+<div class="container reports-container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="reports-title">Sistema de Relatórios</h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <nav class="nav nav-pills nav-fill mb-4 reports-nav">
+                <a class="nav-link {% if request.resolver_match.url_name == 'list' %}active{% endif %}" 
+                   href="{% url 'reports:list' %}">
+                   <i class="fas fa-list"></i> Lista de Relatórios
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'occupancy' %}active{% endif %}" 
+                   href="{% url 'reports:occupancy' %}">
+                   <i class="fas fa-bed"></i> Relatório de Ocupação
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'revenue' %}active{% endif %}" 
+                   href="{% url 'reports:revenue' %}">
+                   <i class="fas fa-chart-line"></i> Relatório de Receitas
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'checkins' %}active{% endif %}" 
+                   href="{% url 'reports:checkins' %}">
+                   <i class="fas fa-sign-in-alt"></i> Relatório de Check-ins
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'cash_flow' %}active{% endif %}" 
+                   href="{% url 'reports:cash_flow' %}">
+                   <i class="fas fa-money-bill-wave"></i> Relatório de Fluxo de Caixa
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'financial_report' %}active{% endif %}" 
+                   href="{% url 'reports:financial_report' %}">
+                   <i class="fas fa-file-invoice-dollar"></i> Relatório Financeiro Detalhado
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card reports-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="reports-card-title">{% block report_title %}Relatório{% endblock %}</h3>
+                    {% block report_actions %}{% endblock %}
+                </div>
+                <div class="card-body">
+                    {% block report_filters %}{% endblock %}
+                    {% block report_content %}{% endblock %}
+                </div>
+                <div class="card-footer text-muted">
+                    <small>Gerado em: {% now "d/m/Y H:i" %}</small>
+                    {% block report_footer %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% block report_scripts %}{% endblock %}
 {% endblock %}

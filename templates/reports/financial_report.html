@@ -1,5 +1,6 @@
 {% extends 'reports/base_reports.html' %}
 {% load static %}
+{% load report_filters %}
 
 {% block title %}Relatório Financeiro Detalhado{% endblock %}
 
@@ -64,7 +65,7 @@
                         {% if net_profit >= 0 %}
                             <h3 class="text-success mb-0">R$ {{ net_profit|floatformat:2 }}</h3>
                         {% else %}
-                            <h3 class="text-danger mb-0">-R$ {{ net_profit|abs|floatformat:2 }}</h3>
+                            <h3 class="text-danger mb-0">-R$ {{ net_profit|floatformat:2|cut:"-" }}</h3>
                         {% endif %}
                     </div>
                 </div>

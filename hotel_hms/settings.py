@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+from datetime import timedelta
 from dotenv import load_dotenv
 
 # Carrega variáveis de ambiente do arquivo .env
@@ -25,12 +26,24 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-p^zn=ue=bz0l+o1ai636=(l*^#c=97vc^7qv7te@=k79&ptb6a')
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    # Gerar um aviso no console quando SECRET_KEY não está definida
+    import warnings
+    warnings.warn(
+        "SECRET_KEY não está definida no ambiente. "
+        "Usando uma chave aleatória temporária. "
+        "Isso não deve ser usado em produção!",
+        RuntimeWarning
+    )
+    # Em ambientes de desenvolvimento, gerar uma chave temporária
+    import secrets
+    SECRET_KEY = secrets.token_hex(32)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',') if os.environ.get('ALLOWED_HOSTS') else []
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',') if os.environ.get('ALLOWED_HOSTS') else ['*' if DEBUG else 'localhost']
 
 
 # Application definition
@@ -61,10 +74,9 @@ REST_FRAMEWORK = {
     ),
 }
 
-from datetime import timedelta
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=int(os.environ.get('JWT_ACCESS_TOKEN_MINUTES', 60))),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=int(os.environ.get('JWT_REFRESH_TOKEN_DAYS', 1))),
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 

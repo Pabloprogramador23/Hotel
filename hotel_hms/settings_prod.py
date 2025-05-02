@@ -5,37 +5,42 @@ Configurações de produção para o projeto hotel_hms.
 import os
 from pathlib import Path
 from .settings import *  # Importa todas as configurações base
-import sentry_sdk
-from sentry_sdk.integrations.django import DjangoIntegration
 
 # SEGURANÇA
 # ------------------------------------------------------------------------------
 # IMPORTANTE: Definir SECRET_KEY via variável de ambiente em produção
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+# Primeiro tenta DJANGO_SECRET_KEY (convenção padrão), depois SECRET_KEY
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', os.environ.get('SECRET_KEY', 'default_insecure_key_for_dev'))
 
 # Desativar modo DEBUG
-DEBUG = False
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
 # Hosts permitidos na produção - ajuste conforme necessário
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',')
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', os.environ.get('ALLOWED_HOSTS', '')).split(',')
 
 # HTTPS/SSL
 # ------------------------------------------------------------------------------
-# Garantir HTTPS em produção
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-SECURE_SSL_REDIRECT = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
-SECURE_HSTS_SECONDS = 31536000  # 1 ano
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
+# Garantir HTTPS em produção (só se não estiver em DEBUG)
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 ano
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+else:
+    # Em desenvolvimento, desativamos redirecionamentos SSL
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
 
 # BANCO DE DADOS
 # ------------------------------------------------------------------------------
 # Configuração para PostgreSQL em produção
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
+        'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.postgresql'),
         'NAME': os.environ.get('DB_NAME'),
         'USER': os.environ.get('DB_USER'),
         'PASSWORD': os.environ.get('DB_PASSWORD'),
@@ -52,6 +57,9 @@ STATIC_ROOT = os.environ.get('DJANGO_STATIC_ROOT', BASE_DIR / 'staticfiles')
 
 # LOGGING
 # ------------------------------------------------------------------------------
+# Criar diretório de logs se não existir
+os.makedirs(os.path.dirname(os.environ.get('DJANGO_LOG_FILE', os.path.join(BASE_DIR, 'logs/hotel_hms.log'))), exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -119,15 +127,3 @@ MIDDLEWARE = [
 
 # Configuração do WhiteNoise para arquivos estáticos
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-# SENTRY
-# ------------------------------------------------------------------------------
-# Configura o Sentry para captura de exceções e performance
-SENTRY_DSN = os.environ.get('SENTRY_DSN')
-if SENTRY_DSN:
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        integrations=[DjangoIntegration()],
-        traces_sample_rate=0.5,
-        send_default_pii=True,
-    )

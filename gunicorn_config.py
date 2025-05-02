@@ -1,35 +1,41 @@
-"""
-Configuração do Gunicorn para produção
-"""
-import multiprocessing
+"""Configuração do Gunicorn para o projeto Hotel HMS."""
 import os
+import multiprocessing
 
-# Diretório de trabalho
-bind = os.environ.get("GUNICORN_BIND", "0.0.0.0:8000")
+# Bind
+bind = "0.0.0.0:8000"
 
-# Número de workers baseado no número de cores
-workers = int(os.environ.get("GUNICORN_WORKERS", (multiprocessing.cpu_count() * 2) + 1))
+# Número de workers - recomendado: (2 x núcleos) + 1
+workers = int(os.environ.get("GUNICORN_WORKERS", multiprocessing.cpu_count() * 2 + 1))
+
+# Número de threads por worker
+threads = int(os.environ.get("GUNICORN_THREADS", 1))
 
 # Tipo de worker
-worker_class = os.environ.get("GUNICORN_WORKER_CLASS", "sync")
+worker_class = "gthread"  # Usar 'uvicorn.workers.UvicornWorker' para ASGI
 
-# Timeout em segundos
-timeout = int(os.environ.get("GUNICORN_TIMEOUT", 120))
+# Timeout (segundos)
+timeout = int(os.environ.get("GUNICORN_TIMEOUT", 30))
 
-# Máximo de requisições antes do restart do worker
+# Máximo de conexões pendentes
+backlog = int(os.environ.get("GUNICORN_BACKLOG", 2048))
+
+# Máximo de requisições antes de reiniciar um worker
 max_requests = int(os.environ.get("GUNICORN_MAX_REQUESTS", 1000))
 max_requests_jitter = int(os.environ.get("GUNICORN_MAX_REQUESTS_JITTER", 50))
 
+# Keepalive (segundos)
+keepalive = int(os.environ.get("GUNICORN_KEEPALIVE", 2))
+
 # Log
+accesslog = "-"  # stdout
+errorlog = "-"   # stderr
 loglevel = os.environ.get("GUNICORN_LOG_LEVEL", "info")
-accesslog = os.environ.get("GUNICORN_ACCESS_LOG", "-")  # - para stdout
-errorlog = os.environ.get("GUNICORN_ERROR_LOG", "-")    # - para stderr
 
-# Configurações para manter o servidor rodando por longos períodos
-keepalive = int(os.environ.get("GUNICORN_KEEPALIVE", 5))
-worker_tmp_dir = os.environ.get("GUNICORN_WORKER_TMP_DIR", "/dev/shm")
-worker_abort_on_error = True
+# Preload app (melhor performance, mas mais uso de memória)
+preload_app = os.environ.get("GUNICORN_PRELOAD_APP", "true").lower() == "true"
 
-# SSL (em produção, recomenda-se usar um proxy como Nginx para SSL)
-# keyfile = os.environ.get("GUNICORN_SSL_KEYFILE")
-# certfile = os.environ.get("GUNICORN_SSL_CERTFILE")
+# Tamanho do buffer de requisição
+limit_request_line = int(os.environ.get("GUNICORN_LIMIT_REQUEST_LINE", 4094))
+limit_request_fields = int(os.environ.get("GUNICORN_LIMIT_REQUEST_FIELDS", 100))
+limit_request_field_size = int(os.environ.get("GUNICORN_LIMIT_REQUEST_FIELD_SIZE", 8190))

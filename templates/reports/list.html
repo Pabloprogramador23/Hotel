@@ -1,49 +1,123 @@
-{% extends 'base.html' %}
+{% extends 'reports/base_reports.html' %}
 
-{% block title %}Relatórios{% endblock %}
+{% block report_title %}Lista de Relatórios Disponíveis{% endblock %}
 
-{% block content %}
-<div class="reports-page">
-    <h2>Relatórios</h2>
-    
-    <div class="report-filters">
-        <form id="report-form" class="report-form">
-            <div class="form-group">
-                <label for="report_type">Tipo de Relatório</label>
-                <select id="report_type" name="report_type" required>
-                    <option value="">Selecione um relatório</option>
-                    {% for report in report_types %}
-                    <option value="{{ report.id }}">{{ report.name }}</option>
-                    {% endfor %}
+{% block report_filters %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <form id="report-form" class="row g-3" method="get">
+            <div class="col-md-4">
+                <label for="report_type" class="form-label">Tipo de Relatório</label>
+                <select id="report_type" name="report_type" class="form-select" required>
+                    <option value="" selected disabled>Selecione um relatório</option>
+                    <option value="occupancy">Relatório de Ocupação</option>
+                    <option value="revenue">Relatório de Receitas</option>
+                    <option value="checkins">Relatório de Check-ins</option>
+                    <option value="cash_flow">Relatório de Fluxo de Caixa</option>
+                    <option value="financial_report">Relatório Financeiro Detalhado</option>
+                    <option value="financial_consolidated">Relatório Financeiro Consolidado</option>
                 </select>
             </div>
             
-            <div class="form-group">
-                <label for="start_date">Data Inicial</label>
-                <input type="date" id="start_date" name="start_date" required>
+            <div class="col-md-3">
+                <label for="start_date" class="form-label">Data Inicial</label>
+                <input type="date" id="start_date" name="start_date" class="form-control" required>
             </div>
             
-            <div class="form-group">
-                <label for="end_date">Data Final</label>
-                <input type="date" id="end_date" name="end_date" required>
+            <div class="col-md-3">
+                <label for="end_date" class="form-label">Data Final</label>
+                <input type="date" id="end_date" name="end_date" class="form-control" required>
             </div>
             
-            <button type="submit" class="btn">Gerar Relatório</button>
+            <div class="col-md-2">
+                <label class="form-label d-none d-md-block">&nbsp;</label>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-file-alt me-2"></i>Gerar Relatório
+                </button>
+            </div>
         </form>
-    </div>
-
-    <div class="report-cards">
-        {% for report in report_types %}
-        <div class="report-card" onclick="selectReport('{{ report.id }}')">
-            <h3>{{ report.name }}</h3>
-            <p>{{ report.description }}</p>
-        </div>
-        {% endfor %}
     </div>
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block report_content %}
+<div class="row report-cards">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 report-card" data-report="occupancy">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-bed text-primary me-2"></i>Relatório de Ocupação</h5>
+                <p class="card-text">Estatísticas de ocupação do hotel, incluindo taxas por tipo de quarto e tendências dos últimos 7 dias.</p>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="{% url 'reports:occupancy' %}" class="btn btn-sm btn-outline-primary">Visualizar</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 report-card" data-report="revenue">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-chart-line text-success me-2"></i>Relatório de Receitas</h5>
+                <p class="card-text">Análise de receita em períodos específicos, incluindo valores pagos e pendentes.</p>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="{% url 'reports:revenue' %}" class="btn btn-sm btn-outline-primary">Visualizar</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 report-card" data-report="checkins">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-sign-in-alt text-info me-2"></i>Relatório de Check-ins</h5>
+                <p class="card-text">Lista de atividades de check-in, ordenados por data e detalhes das reservas.</p>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="{% url 'reports:checkins' %}" class="btn btn-sm btn-outline-primary">Visualizar</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 report-card" data-report="cash_flow">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-money-bill-wave text-warning me-2"></i>Relatório de Fluxo de Caixa</h5>
+                <p class="card-text">Análise integrada de receitas e despesas, com fluxos financeiros diários e categorização de despesas.</p>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="{% url 'reports:cash_flow' %}" class="btn btn-sm btn-outline-primary">Visualizar</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 report-card" data-report="financial_report">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-file-invoice-dollar text-danger me-2"></i>Relatório Financeiro Detalhado</h5>
+                <p class="card-text">Relatório financeiro completo com análise de margens de lucro, percentuais de pagamento e visualizações detalhadas.</p>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="{% url 'reports:financial_report' %}" class="btn btn-sm btn-outline-primary">Visualizar</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 report-card featured-report" data-report="financial_consolidated">
+            <div class="card-body">
+                <div class="ribbon ribbon-top-right"><span>Novo</span></div>
+                <h5 class="card-title"><i class="fas fa-chart-pie text-primary me-2"></i>Relatório Financeiro Consolidado</h5>
+                <p class="card-text">Visão clara da saúde financeira e lucratividade do hotel, comparando receitas ganhas e recebidas com análise de lucro real.</p>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="{% url 'reports:financial_consolidated' %}" class="btn btn-sm btn-outline-primary">Visualizar</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block report_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('report-form');
@@ -56,6 +130,26 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('end_date').value = today.toISOString().split('T')[0];
     document.getElementById('start_date').value = thirtyDaysAgo.toISOString().split('T')[0];
     
+    // Adiciona evento de clique em cada cartão de relatório
+    document.querySelectorAll('.report-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const reportType = this.dataset.report;
+            document.getElementById('report_type').value = reportType;
+            card.classList.add('selected');
+            
+            // Remove classe selecionada dos outros cartões
+            document.querySelectorAll('.report-card').forEach(otherCard => {
+                if (otherCard !== card) {
+                    otherCard.classList.remove('selected');
+                }
+            });
+            
+            // Rola a tela para o formulário
+            document.getElementById('report-form').scrollIntoView({ behavior: 'smooth' });
+        });
+    });
+    
+    // Gerencia o envio do formulário
     form.addEventListener('submit', function(e) {
         e.preventDefault();
         const reportType = document.getElementById('report_type').value;
@@ -63,17 +157,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const endDate = document.getElementById('end_date').value;
         
         if (!reportType) {
-            showNotification('Selecione um tipo de relatório', 'error');
+            alert('Por favor, selecione um tipo de relatório');
             return;
         }
         
-        window.location.href = `/reports/generate/${reportType}/?start_date=${startDate}&end_date=${endDate}`;
+        // Redireciona para o relatório com os parâmetros de data
+        window.location.href = `{% url 'reports:list' %}${reportType}/?start_date=${startDate}&end_date=${endDate}`;
     });
 });
-
-function selectReport(reportId) {
-    document.getElementById('report_type').value = reportId;
-    document.getElementById('report-form').scrollIntoView({ behavior: 'smooth' });
-}
 </script>
 {% endblock %}

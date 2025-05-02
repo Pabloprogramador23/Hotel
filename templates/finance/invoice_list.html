@@ -39,7 +39,7 @@
                     <form method="post" style="display:inline;">
                         {% csrf_token %}
                         <input type="hidden" name="invoice_id" value="{{ invoice.id }}">
-                        <button type="submit" class="btn btn-sm btn-primary">Marcar como paga</button>
+                        <button type="submit" class="btn btn-sm btn-primary">Registrar pagamento completo</button>
                     </form>
                     {% else %}
                         <span class="text-muted">-</span>
@@ -121,6 +121,6 @@
             <button type="submit" class="btn btn-warning w-100">Criar Fatura Extra</button>
         </div>
     </form>
-    <a href="/reservations/" class="btn btn-secondary mt-3">Voltar para Reservas</a>
+    <a href="/" class="btn btn-secondary mt-3">Voltar para Dashboard</a>
 </div>
 {% endblock %}
