@@ -3,6 +3,7 @@ from django.shortcuts import render
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncDate
 from datetime import date, timedelta, datetime
+from decimal import Decimal
 from apps.rooms.models import Room
 from apps.checkin_checkout.models import CheckIn
 from apps.reservations.models import Reservation
@@ -204,15 +205,28 @@ def financial_report(request: HttpRequest) -> HttpResponse:
     # Obter dados de despesa
     expense_data, total_expense, category_expenses = calculate_expense_data(start_date, end_date)
     
+    # Garantir que os valores sejam do mesmo tipo antes de operações
+    if isinstance(total_revenue, Decimal):
+        if not isinstance(total_expense, Decimal):
+            total_expense = Decimal(str(total_expense))
+    else:
+        total_revenue = float(total_revenue)
+        total_expense = float(total_expense)
+    
     # Calcular lucro líquido
     net_profit = total_revenue - total_expense
     
+    # Garantir que todos os valores sejam float para cálculos percentuais
+    total_revenue_float = float(total_revenue)
+    total_paid_float = float(total_paid)
+    net_profit_float = float(net_profit)
+    
     # Calcular margem de lucro (se houver receita)
-    profit_margin = (net_profit / total_revenue * 100) if total_revenue > 0 else 0
+    profit_margin = (net_profit_float / total_revenue_float * 100) if total_revenue_float > 0 else 0
     
     # Calcular percentual de pagamentos recebidos e pendentes
-    payment_percentage = (total_paid / total_revenue * 100) if total_revenue > 0 else 0
-    pending_percentage = (total_pending / total_revenue * 100) if total_revenue > 0 else 0
+    payment_percentage = (total_paid_float / total_revenue_float * 100) if total_revenue_float > 0 else 0
+    pending_percentage = (float(total_pending) / total_revenue_float * 100) if total_revenue_float > 0 else 0
     
     # Construir dados diários para o gráfico
     daily_data = []
@@ -246,7 +260,7 @@ def financial_report(request: HttpRequest) -> HttpResponse:
         formatted_revenue_entries.append({
             'id': invoice.id,
             'date': invoice.issued_at.date(),
-            'amount': invoice.amount,
+            'amount': float(invoice.amount),  # Converter para float para consistência
             'paid': invoice.paid,
             'guest_name': invoice.reservation.guest_name,
             'room_number': invoice.reservation.room.number if invoice.reservation.room else 'N/A'
@@ -262,11 +276,11 @@ def financial_report(request: HttpRequest) -> HttpResponse:
     context = {
         'start_date': start_date,
         'end_date': end_date,
-        'total_revenue': total_revenue,
-        'total_expense': total_expense,
-        'total_paid': total_paid,
-        'total_pending': total_pending,
-        'net_profit': net_profit,
+        'total_revenue': float(total_revenue),  # Converter para float para o template
+        'total_expense': float(total_expense),
+        'total_paid': float(total_paid),
+        'total_pending': float(total_pending),
+        'net_profit': float(net_profit),
         'profit_margin': profit_margin,
         'payment_percentage': payment_percentage,
         'pending_percentage': pending_percentage,
@@ -310,14 +324,29 @@ def financial_consolidated_report(request: HttpRequest) -> HttpResponse:
     # Obter dados de despesa usando o serviço existente
     expense_data, total_expenses, category_expenses = calculate_expense_data(start_date, end_date)
     
+    # Garantir que os valores sejam do mesmo tipo antes de operações
+    if isinstance(revenue_received, Decimal):
+        if not isinstance(total_expenses, Decimal):
+            total_expenses = Decimal(str(total_expenses))
+    else:
+        revenue_received = float(revenue_received)
+        total_expenses = float(total_expenses)
+    
     # Calcular lucro líquido
     net_profit = revenue_received - total_expenses  # Usamos apenas a receita efetivamente recebida
     
+    # Converter para float para cálculos percentuais
+    total_revenue_float = float(total_revenue)
+    revenue_received_float = float(revenue_received)
+    revenue_pending_float = float(revenue_pending)
+    total_expenses_float = float(total_expenses)
+    net_profit_float = float(net_profit)
+    
     # Calcular percentuais
-    percentage_received = (revenue_received / total_revenue * 100) if total_revenue > 0 else 0
-    percentage_pending = (revenue_pending / total_revenue * 100) if total_revenue > 0 else 0
-    profit_margin = (net_profit / revenue_received * 100) if revenue_received > 0 else 0
-    expense_to_revenue_ratio = (total_expenses / revenue_received * 100) if revenue_received > 0 else 0
+    percentage_received = (revenue_received_float / total_revenue_float * 100) if total_revenue_float > 0 else 0
+    percentage_pending = (revenue_pending_float / total_revenue_float * 100) if total_revenue_float > 0 else 0
+    profit_margin = (net_profit_float / revenue_received_float * 100) if revenue_received_float > 0 else 0
+    expense_to_revenue_ratio = (total_expenses_float / revenue_received_float * 100) if revenue_received_float > 0 else 0
     
     # Construir dados diários para análise detalhada e gráficos
     daily_data = []
@@ -370,7 +399,7 @@ def financial_consolidated_report(request: HttpRequest) -> HttpResponse:
         issued_at__date__lte=end_date
     ).count()
     
-    avg_invoice_value = total_revenue / invoice_count if invoice_count > 0 else 0
+    avg_invoice_value = total_revenue_float / invoice_count if invoice_count > 0 else 0
     
     # Obter faturas recentes para exibição na tabela
     recent_invoices = Invoice.objects.select_related('reservation').filter(
@@ -385,7 +414,7 @@ def financial_consolidated_report(request: HttpRequest) -> HttpResponse:
             'id': invoice.id,
             'date': invoice.issued_at.date(),
             'guest_name': invoice.reservation.guest_name if invoice.reservation else 'N/A',
-            'amount': invoice.amount,
+            'amount': float(invoice.amount),
             'paid': invoice.paid,
         })
     
@@ -399,11 +428,11 @@ def financial_consolidated_report(request: HttpRequest) -> HttpResponse:
     context = {
         'start_date': start_date,
         'end_date': end_date,
-        'total_revenue': total_revenue,
-        'revenue_received': revenue_received,
-        'revenue_pending': revenue_pending,
-        'total_expenses': total_expenses,
-        'net_profit': net_profit,
+        'total_revenue': float(total_revenue),
+        'revenue_received': float(revenue_received),
+        'revenue_pending': float(revenue_pending),
+        'total_expenses': float(total_expenses),
+        'net_profit': float(net_profit),
         'profit_margin': profit_margin,
         'percentage_received': percentage_received,
         'percentage_pending': percentage_pending,
