@@ -1,21 +1,30 @@
 # Python-generated files
 __pycache__/
-*.py[oc]
+*.py[cod]
+*$py.class
 build/
 dist/
 wheels/
-*.egg-info
+*.egg-info/
+*.so
+*.dylib
 
 # Virtual environments
-.venv
+.venv/
 venv/
 ENV/
+env/
+.python-version
+.env-*
 
-# IDEs e editores
+# IDE e editores
 .vscode/
 .idea/
 *.sublime-workspace
 *.sublime-project
+*.swp
+*.swo
+*~
 
 # Arquivos de configuração e credenciais
 .env
@@ -35,12 +44,16 @@ settings_test.py
 # Banco de dados e arquivos sensíveis
 *.sqlite3
 *.db
+db.sqlite3
 *.bak
 *.tmp
 *.log
 
 # Arquivos de mídia e uploads
 media/
+staticfiles/
+!media/.gitkeep
+!static/.gitkeep
 *.pdf
 *.jpg
 *.jpeg
@@ -51,26 +64,30 @@ media/
 *.zip
 
 # Arquivos temporários e de cache
-*.swp
-*.swo
-*.tmp
-*.DS_Store
+.DS_Store
 Thumbs.db
 .cache/
+.pytest_cache/
+__pypackages__/
 
-# Arquivos de lock e dependências gerados
-poetry.lock
-Pipfile.lock
+# UV e gerenciamento de dependências
+.uv/
+uv.lock-local
 
 # Arquivos de testes
 .coverage
 htmlcov/
 .tox/
-.pytest_cache/
+.nox/
+
+# Arquivos de deploy e Docker
+*.tar.gz
+docker-compose.override.yml
+.docker/.env
 
 # Outros
 node_modules/
-
-# Git
-.git/
-.gitignore.swp
+.sass-cache/
+local_settings.py
+celerybeat-schedule
+celerybeat.pid

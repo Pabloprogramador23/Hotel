@@ -1,6 +1,7 @@
 # Git
-.git
+.git/
 .gitignore
+.gitattributes
 
 # Python
 __pycache__/
@@ -8,48 +9,79 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-.pytest_cache
+.pytest_cache/
 .coverage
-coverage.xml
 htmlcov/
+coverage.xml
+*.cover
+*,cover
+.hypothesis/
+
+# Ambientes virtuais e gerenciadores de pacotes
+venv/
+.venv/
+env/
+.env/
+.python-version
+.uv/
 
 # Arquivos de IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+*~
+.editorconfig
 
-# Outros
-.DS_Store
+# Arquivos de configuração e credenciais que não devem ir para o container
 .env
-.env.local
-.env.development
-.env.test
-.env.production
-.env.example
+.env.*
+*.env
+*.secret
+*.key
+*.pem
+*.crt
+*.pfx
+*.p12
+secrets.json
+credentials.json
+
+# Arquivos do sistema e temporários
+.DS_Store
+Thumbs.db
+desktop.ini
+*~
+.tmp/
+.cache/
 
 # Específico do projeto
-staticfiles/
-media/
-logs/
-*.log
 db.sqlite3
+*.sqlite3
+media/
+# Os arquivos estáticos serão gerados pelo collectstatic dentro do container
+# Não ignoramos o diretório static/ pois ele contém arquivos fonte necessários
+staticfiles/
+*.log
+logs/
+
+# Arquivos de testes e documentação
+tests/
+docs/
+*.md
+LICENSE
+pytest.ini
 
 # Docker
+docker-compose.yml
 docker-compose.override.yml
+Dockerfile.*
+.dockerignore
+
+# Arquivos de teste que não precisamos no container
+*.pytest_cache
+test-reports/
+
+# Outros arquivos que não precisamos no container
+node_modules/
+*.tar.gz
+*.zip

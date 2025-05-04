@@ -1,187 +1,174 @@
-# Hotel HMS - Sistema de Gerenciamento Hoteleiro
+# Pousada Pajeú - Sistema de Gerenciamento Hoteleiro
 
-Sistema de gerenciamento hoteleiro completo com módulos para reservas, check-in/check-out, gestão de quartos, faturamento e relatórios.
+![Versão](https://img.shields.io/badge/versão-1.0.0-blue.svg)
+![Python](https://img.shields.io/badge/Python-3.12-brightgreen.svg)
+![Django](https://img.shields.io/badge/Django-5.x-green.svg)
 
-## Requisitos
+Sistema completo de gerenciamento hoteleiro desenvolvido com Django 5, oferecendo módulos para reservas, check-in/check-out, gestão de quartos, faturamento e relatórios administrativos.
 
-- Python 3.12+
-- Django 5.x
-- PostgreSQL (produção)
-- Redis (cache em produção)
-- uv (gerenciador de pacotes)
+## 🏨 Visão Geral
 
-## Estrutura do Projeto
+O Pousada Pajeú é um sistema de gerenciamento hoteleiro moderno e eficiente que permite:
 
-O projeto está organizado nos seguintes módulos:
+- Gerenciamento completo de reservas
+- Controle de disponibilidade de quartos
+- Processos de check-in e check-out simplificados
+- Sistema integrado de faturamento e pagamentos
+- Geração de relatórios gerenciais
+- API RESTful para integrações externas
+- Configurações personalizáveis para diferentes estabelecimentos
 
-- **apps/reservations**: Gerenciamento de reservas
-- **apps/rooms**: Gerenciamento de quartos
-- **apps/checkin_checkout**: Processos de check-in e check-out
-- **apps/finance**: Faturamento e pagamentos
-- **apps/reports**: Relatórios gerenciais
-- **apps/settings_manager**: Gerenciamento de configurações do sistema
-- **apps/api**: API para integração com outros sistemas
+## 🚀 Tecnologias
 
-## Setup do Ambiente de Desenvolvimento
+- **Python 3.12** - Linguagem de programação principal
+- **Django 5.x** - Framework web de alto nível
+- **PostgreSQL 15** - Banco de dados relacional (produção)
+- **Caddy** - Servidor web com suporte automático a HTTPS
+- **Gunicorn** - Servidor WSGI para Python
+- **uv** - Gerenciador de pacotes e ambientes Python
+- **pytest** - Framework para testes unitários e de integração
+- **Docker** - Containerização para deploy consistente
 
-1. Clone o repositório:
+## 📁 Estrutura do Projeto
+
+O projeto segue uma arquitetura modular organizada em apps Django:
+
+```
+apps/
+├── api/ - API RESTful para integrações
+├── checkin_checkout/ - Processos de entrada e saída
+├── finance/ - Faturamento e pagamentos
+├── reports/ - Relatórios gerenciais
+├── reservations/ - Gerenciamento de reservas
+├── rooms/ - Gestão de quartos e tipos
+└── settings_manager/ - Configurações do sistema
+```
+
+## 🛠️ Configuração do Ambiente de Desenvolvimento
+
+### Pré-requisitos
+
+- Python 3.12
+- uv (gerenciador de pacotes Python)
+- PostgreSQL (opcional para desenvolvimento)
+
+### Instalação
+
+1. **Clone o repositório**:
    ```bash
-   git clone [url-do-repositorio]
-   cd hotel-hms
+   git clone https://github.com/seu-usuario/pousada-pajeu.git
+   cd pousada-pajeu
    ```
 
-2. Instale as dependências usando uv (recomendado):
+2. **Configuração do ambiente**:
    ```bash
+   # Instale as dependências usando uv (recomendado)
    uv pip install -r requirements.txt
    ```
 
-3. Configure o arquivo `.env` a partir do `.env.example`:
+3. **Configure o arquivo `.env`**:
    ```bash
    cp .env.example .env
    # Edite o arquivo .env com suas configurações
    ```
 
-4. Execute as migrações:
+4. **Execute as migrações**:
    ```bash
    python manage.py migrate
    ```
 
-5. Crie um superusuário:
+5. **Crie um superusuário**:
    ```bash
    python manage.py createsuperuser
    ```
 
-6. Execute o servidor de desenvolvimento:
+6. **Execute o servidor de desenvolvimento**:
    ```bash
    python manage.py runserver
    ```
 
-## Testes
+## ⚙️ Gerenciamento de Dependências
 
-Execute os testes usando o script fornecido:
+Seguimos práticas recomendadas para o gerenciamento de dependências:
+
+1. Adicione novas dependências ao arquivo `pyproject.toml`
+2. Gere/atualize o arquivo requirements.txt:
+   ```bash
+   uv pip compile -o requirements.txt pyproject.toml
+   ```
+3. Instale as dependências atualizadas:
+   ```bash
+   uv pip install -r requirements.txt
+   ```
+
+⚠️ **IMPORTANTE**: Nunca use `pip install` diretamente. Sempre utilize `uv pip install -r requirements.txt`.
+
+## 🧪 Testes
+
+Executamos testes com pytest:
+
 ```bash
-python run_tests.py
+# Instale dependências e execute testes
+uv pip install -r requirements.txt && pytest -q
 ```
 
-Para executar testes com cobertura:
-1. Adicione `pytest-cov>=4.1.0` ao `pyproject.toml`
-2. Execute `uv pip install -r requirements.txt`
-3. Execute `pytest --cov=apps`
-
-## Gerenciamento de Dependências
-
-- Adicione novas dependências ao arquivo `pyproject.toml`
-- Atualize o arquivo `requirements.txt` usando o script fornecido:
-  ```bash
-  python update_requirements.py
-  ```
-
-## Preparação para Deployment
-
-### Checklist de Pré-Deployment
-
-1. **Configuração do Ambiente**:
-   - Copie `.env.example` para `.env` no servidor de produção
-   - Configure todas as variáveis de ambiente necessárias
-   - Garanta que `DJANGO_SETTINGS_MODULE=hotel_hms.settings_prod`
-
-2. **Banco de Dados**:
-   - Configure PostgreSQL para produção
-   - Execute as migrações iniciais: `python manage.py migrate`
-
-3. **Arquivos Estáticos**:
-   - Execute `python manage.py collectstatic`
-   - Verifique se o diretório `STATIC_ROOT` está configurado corretamente
-
-4. **Segurança**:
-   - Garanta que `DEBUG=False`
-   - Configure uma `SECRET_KEY` segura
-   - Configure `ALLOWED_HOSTS` apropriadamente
-   - Verifique configurações SSL/HTTPS
-
-5. **Servidor Web**:
-   - Configure o servidor Gunicorn usando `gunicorn_config.py`:
-     ```bash
-     gunicorn hotel_hms.wsgi:application -c gunicorn_config.py
-     ```
-   - Configure Nginx como proxy reverso (recomendado)
-
-## Estrutura de Deployment Recomendada
-
-```
-[Servidor Web (Nginx)] 
-       ↓
-[WSGI (Gunicorn)] → [Django Application]
-       ↓
-[Banco de Dados (PostgreSQL)]
-```
-
-## Monitoramento em Produção
-
-Recomendações para monitoramento:
-- Configure logging apropriado (já configurado em `settings_prod.py`)
-- Implemente um sistema de monitoramento de saúde da aplicação
-- Configure alertas para erros críticos
-
-## Manutenção
-
-Para atualizar o sistema em produção:
-1. Faça backup do banco de dados
-2. Pull das últimas mudanças do repositório
-3. Atualize dependências: `uv pip install -r requirements.txt`
-4. Execute migrações: `python manage.py migrate`
-5. Colete arquivos estáticos: `python manage.py collectstatic --noinput`
-6. Reinicie o servidor Gunicorn
-
-## Exemplos de Uso da API
-
-### Obter Estatísticas do Dashboard
+Para testes com cobertura:
 ```bash
-curl -X GET http://localhost:8000/api/dashboard/stats/ -H "Authorization: Token <seu_token>"
+pytest --cov=apps
 ```
 
-### Listar Quartos Disponíveis
+## 🐳 Deploy com Docker
+
+O projeto está configurado para deploy com Docker e Docker Compose:
+
 ```bash
-curl -X GET "http://localhost:8000/api/available-rooms/?room_type=single&check_in=2025-05-01&check_out=2025-05-05" -H "Authorization: Token <seu_token>"
+# Construir e iniciar todos os serviços
+docker-compose up -d
 ```
 
-### Criar uma Nova Reserva
-```bash
-curl -X POST http://localhost:8000/api/reservations/ \
--H "Content-Type: application/json" \
--H "Authorization: Token <seu_token>" \
--d '{
-    "guest_name": "John Doe",
-    "guest_email": "john.doe@example.com",
-    "room_id": 1,
-    "check_in_date": "2025-05-01",
-    "check_out_date": "2025-05-05",
-    "notes": "Preferência por andar alto",
-    "status": "confirmed"
-}'
-```
+A configuração inclui:
+- Container Django com Gunicorn
+- PostgreSQL 15 para banco de dados
+- Caddy como servidor web com certificado SSL automático
 
-### Realizar Check-in
-```bash
-curl -X POST http://localhost:8000/checkin_checkout/checkin/1/ \
--H "Authorization: Token <seu_token>"
-```
+## 📋 CI/CD
 
-### Realizar Check-out
-```bash
-curl -X POST http://localhost:8000/checkin_checkout/checkout/1/ \
--H "Authorization: Token <seu_token>"
-```
+O repositório inclui workflows para CI/CD que automatizam:
 
-### Adicionar Pagamento a uma Fatura
-```bash
-curl -X POST http://localhost:8000/api/finance/payments/ \
--H "Content-Type: application/json" \
--H "Authorization: Token <seu_token>" \
--d '{
-    "invoice_id": 1,
-    "amount": 350.00,
-    "method": "Cartão de Crédito",
-    "notes": "Pagamento parcial"
-}'
-```
+- Testes automatizados em cada push
+- Verificação de código com flake8, black e isort
+- Deploy automatizado em ambientes de staging e produção
+
+## 📄 Documentação da API
+
+A API RESTful está disponível em `/api/v1/` e inclui endpoints para:
+
+- Gerenciamento de reservas
+- Disponibilidade de quartos
+- Processos de check-in e check-out
+- Faturas e pagamentos
+- Relatórios administrativos
+
+Documentação interativa disponível em `/api/docs/` (Swagger).
+
+## 🌐 Domínio em Produção
+
+O sistema está disponível em produção em:
+- https://pousadapajeusystem.space
+
+## 👥 Contribuindo
+
+1. Faça um fork do projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/nome-da-feature`)
+3. Escreva testes para sua feature
+4. Faça commit das mudanças (`git commit -m 'Adiciona nova feature'`)
+5. Faça push para a branch (`git push origin feature/nome-da-feature`)
+6. Abra um Pull Request
+
+## 📜 Licença
+
+Este projeto está licenciado sob a licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
+
+---
+
+© 2025 Pousada Pajeú. Todos os direitos reservados.
