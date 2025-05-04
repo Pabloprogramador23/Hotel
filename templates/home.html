@@ -524,11 +524,28 @@ async function renderCalendar() {
     // Carrega os dados de reservas para este mês
     let reservationData;
     try {
-        const response = await fetch(`/api/reservations/calendar/?year=${currentYear}&month=${currentMonth + 1}`);
+        // Obter o CSRF token para requisições autenticadas
+        const csrftoken = getCookie('csrftoken');
+        
+        // Usar caminho absoluto baseado na raiz do site
+        const apiUrl = `/api/reservations/calendar/?year=${currentYear}&month=${currentMonth + 1}`;
+        
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken,
+                // Adicionar cabeçalho de autenticação se necessário
+                // 'Authorization': 'Bearer ' + token
+            },
+            credentials: 'same-origin'  // Importante para cookies de sessão/CSRF
+        });
+        
         if (response.ok) {
             reservationData = await response.json();
+            console.log('Dados do calendário carregados com sucesso:', reservationData);
         } else {
-            console.error('Erro ao carregar dados das reservas');
+            console.error('Erro ao carregar dados das reservas:', response.status, response.statusText);
             reservationData = { checkins: [], checkouts: [], occupied_days: [] };
         }
     } catch (error) {
@@ -605,21 +622,38 @@ function showDayDetails(dateString) {
 
 async function updateStats() {
     try {
-        const response = await fetch('/api/dashboard/stats/');
-        const data = await response.json();
+        // Obter o CSRF token para requisições autenticadas
+        const csrftoken = getCookie('csrftoken');
         
-        // Atualiza os valores no dashboard
-        document.getElementById('occupancyRate').textContent = data.occupancy_rate + '%';
-        document.getElementById('todayCheckins').textContent = data.todays_checkins;
-        document.getElementById('todayCheckouts').textContent = data.todays_checkouts;
+        const response = await fetch('/api/dashboard/stats/', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken,
+                // Adicionar cabeçalho de autenticação se necessário
+                // 'Authorization': 'Bearer ' + token
+            },
+            credentials: 'same-origin'  // Importante para cookies de sessão/CSRF
+        });
         
-        // Atualiza detalhes
-        document.getElementById('occupiedRooms').textContent = data.occupied_rooms;
-        document.getElementById('availableRooms').textContent = data.available_rooms;
-        document.getElementById('completedCheckins').textContent = data.completed_checkins;
-        document.getElementById('pendingCheckins').textContent = data.pending_checkins;
-        document.getElementById('completedCheckouts').textContent = data.completed_checkouts;
-        document.getElementById('pendingCheckouts').textContent = data.pending_checkouts;
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Atualiza os valores no dashboard
+            document.getElementById('occupancyRate').textContent = data.occupancy_rate + '%';
+            document.getElementById('todayCheckins').textContent = data.todays_checkins;
+            document.getElementById('todayCheckouts').textContent = data.todays_checkouts;
+            
+            // Atualiza detalhes
+            document.getElementById('occupiedRooms').textContent = data.occupied_rooms;
+            document.getElementById('availableRooms').textContent = data.available_rooms;
+            document.getElementById('completedCheckins').textContent = data.completed_checkins;
+            document.getElementById('pendingCheckins').textContent = data.pending_checkins;
+            document.getElementById('completedCheckouts').textContent = data.completed_checkouts;
+            document.getElementById('pendingCheckouts').textContent = data.pending_checkouts;
+        } else {
+            console.error('Erro ao atualizar estatísticas:', response.status, response.statusText);
+        }
     } catch (error) {
         console.error('Erro ao atualizar estatísticas:', error);
     }

@@ -28,6 +28,14 @@ DEBUG = True
 # Permitir todos os hosts em desenvolvimento local
 ALLOWED_HOSTS = ['*']
 
+# Origens confiáveis para CSRF
+CSRF_TRUSTED_ORIGINS = [
+    'https://pousadapajeusystem.space',
+    'https://www.pousadapajeusystem.space',
+    'http://pousadapajeusystem.space',
+    'http://www.pousadapajeusystem.space',
+]
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
