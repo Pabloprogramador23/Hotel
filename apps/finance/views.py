@@ -67,34 +67,45 @@ def create_invoice(request, reservation_id):
 @require_POST
 def mark_invoice_paid(request, invoice_id):
     """
-    Adiciona um pagamento completo para uma fatura
+    Adiciona um pagamento completo para uma fatura, impedindo duplicidade.
     """
     try:
         with transaction.atomic():
             invoice = get_object_or_404(Invoice, id=invoice_id)
-            
+
             if invoice.paid:
                 return JsonResponse({
                     'success': False,
                     'message': 'Esta fatura já está paga'
                 }, status=400)
-                
-            # Ao invés de marcar diretamente como paga, criamos um pagamento
-            # que cobre o valor total da fatura
+
+            # Verifica se já existe um pagamento automático igual
+            exists = Payment.objects.filter(
+                invoice=invoice,
+                method='Sistema',
+                notes='Pagamento completo via botão "Marcar como Paga"'
+            ).exists()
+            if exists:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Já existe um pagamento automático registrado para esta fatura.'
+                }, status=400)
+
+            # Cria o pagamento automático
             Payment.objects.create(
                 invoice=invoice,
                 amount=invoice.amount,
                 method='Sistema',
                 notes='Pagamento completo via botão "Marcar como Paga"'
             )
-            
+
             # O status da fatura será atualizado automaticamente pelo método save() do Payment
-            
+
             return JsonResponse({
                 'success': True,
                 'message': 'Pagamento registrado e fatura atualizada com sucesso'
             })
-            
+
     except Exception as e:
         return JsonResponse({
             'success': False,
@@ -291,3 +302,22 @@ def delete_expense(request, expense_id):
             messages.error(request, f'Erro ao excluir despesa: {str(e)}')
     
     return redirect('finance:expense_list')
+
+@login_required
+def delete_payment(request, payment_id):
+    """
+    Exclui um pagamento individual de uma fatura.
+    """
+    payment = get_object_or_404(Payment, id=payment_id)
+    reservation_id = payment.invoice.reservation.id if payment.invoice.reservation else None
+    if request.method == 'POST':
+        try:
+            payment.delete()
+            messages.success(request, 'Pagamento removido com sucesso!')
+        except Exception as e:
+            messages.error(request, f'Erro ao remover pagamento: {e}')
+        if reservation_id:
+            return redirect(reverse('finance:reservation_invoices', args=[reservation_id]))
+        return redirect('/')
+    # Não permite GET para segurança
+    return redirect('/')

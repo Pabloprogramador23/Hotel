@@ -21,6 +21,10 @@
     {% csrf_token %}
 </head>
 <body>
+    <!-- Botão de alternância de tema -->
+    <button id="theme-toggle" class="btn btn-outline-secondary position-fixed" style="top: 1rem; right: 1rem; z-index: 9999;">
+        <i id="theme-toggle-icon" class="fas fa-moon"></i>
+    </button>
     <!-- Barra de navegação superior -->
     
     <!-- Conteúdo principal -->
@@ -68,6 +72,31 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Scripts base -->
     <script src="{% static 'js/main.js' %}"></script>
+    <script>
+    // Dark/Light mode toggle
+    function setTheme(dark) {
+        if (dark) {
+            document.body.classList.add('dark-mode');
+            document.getElementById('theme-toggle-icon').classList.remove('fa-moon');
+            document.getElementById('theme-toggle-icon').classList.add('fa-sun');
+        } else {
+            document.body.classList.remove('dark-mode');
+            document.getElementById('theme-toggle-icon').classList.remove('fa-sun');
+            document.getElementById('theme-toggle-icon').classList.add('fa-moon');
+        }
+    }
+    function getThemePref() {
+        return localStorage.getItem('theme') === 'dark';
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+        setTheme(getThemePref());
+        document.getElementById('theme-toggle').addEventListener('click', function() {
+            const dark = !document.body.classList.contains('dark-mode');
+            setTheme(dark);
+            localStorage.setItem('theme', dark ? 'dark' : 'light');
+        });
+    });
+    </script>
     {% endblock %}
     
     <!-- Scripts específicos de página -->

@@ -1,8 +1,9 @@
 import pytest
 from decimal import Decimal
+from django.urls import reverse
 from datetime import date, timedelta
 
-from apps.finance.models import Invoice
+from apps.finance.models import Invoice, Payment
 from apps.reservations.models import Reservation
 from apps.rooms.models import Room
 
@@ -125,3 +126,46 @@ class TestInvoiceModel:
         
         # Verificar que as faturas foram excluídas em cascata
         assert Invoice.objects.count() == 0
+    
+    def test_nao_duplicar_pagamento_automatico_e_remover_pagamento(client, django_user_model):
+        """
+        Garante que não é possível registrar múltiplos pagamentos automáticos para a mesma fatura
+        e que é possível remover um pagamento registrado.
+        """
+        # Cria usuário e faz login
+        user = django_user_model.objects.create_user(username='testuser', password='testpass')
+        client.force_login(user)
+
+        # Cria reserva e fatura
+        room = Room.objects.create(number="999", room_type="double", status="clean")
+        res = Reservation.objects.create(
+            guest_name="Teste Pagamento",
+            room=room,
+            check_in_date=date.today(),
+            check_out_date=date.today() + timedelta(days=2),
+            status="confirmed"
+        )
+        invoice = Invoice.objects.create(reservation=res, amount=Decimal('100.00'), paid=False)
+
+        # 1º pagamento automático
+        url = reverse('finance:mark_invoice_paid', args=[invoice.id])
+        resp1 = client.post(url)
+        assert resp1.status_code == 200
+        invoice.refresh_from_db()
+        assert invoice.paid is True
+        assert Payment.objects.filter(invoice=invoice).count() == 1
+
+        # 2º pagamento automático (não deve criar outro)
+        resp2 = client.post(url)
+        assert resp2.status_code == 400
+        assert b'Ja existe um pagamento automatico' in resp2.content or b'Já existe um pagamento' in resp2.content
+        assert Payment.objects.filter(invoice=invoice).count() == 1
+
+        # Remove o pagamento
+        payment = Payment.objects.get(invoice=invoice)
+        del_url = reverse('finance:delete_payment', args=[payment.id])
+        resp3 = client.post(del_url, follow=True)
+        assert resp3.status_code == 200
+        assert Payment.objects.filter(invoice=invoice).count() == 0
+        invoice.refresh_from_db()
+        assert invoice.paid is False

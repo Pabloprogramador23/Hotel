@@ -19,6 +19,46 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    background: #f8f9fa;
+    transition: background 0.2s, color 0.2s;
+}
+
+body.dark-mode {
+    background: #181a1b !important;
+    color: #e0e0e0 !important;
+}
+
+body.dark-mode .card,
+body.dark-mode .modal-content {
+    background: #23272b !important;
+    color: #e0e0e0 !important;
+}
+
+body.dark-mode .table {
+    background: #23272b !important;
+    color: #e0e0e0 !important;
+}
+
+body.dark-mode a {
+    color: #8ab4f8;
+}
+
+body.dark-mode .btn-primary {
+    background: #3a3f44;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+body.dark-mode .form-control {
+    background: #23272b;
+    color: #e0e0e0;
+    border-color: #444;
+}
+
+body.dark-mode .alert {
+    background: #23272b;
+    color: #e0e0e0;
+    border-color: #444;
 }
 
 /* Estilos para o navbar personalizado */

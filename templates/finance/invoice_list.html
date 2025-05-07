@@ -60,6 +60,7 @@
                 <th>Data</th>
                 <th>Método</th>
                 <th>Observação</th>
+                <th>Ação</th>
             </tr>
         </thead>
         <tbody>
@@ -71,9 +72,17 @@
                     <td>{{ payment.paid_at|date:'d/m/Y H:i' }}</td>
                     <td>{{ payment.method|default:'-' }}</td>
                     <td>{{ payment.notes|default:'-' }}</td>
+                    <td>
+                        <form method="post" action="{% url 'finance:delete_payment' payment.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Remover este pagamento?');">
+                                <i class="fas fa-trash"></i> Excluir
+                            </button>
+                        </form>
+                    </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="5">Nenhum pagamento registrado.</td></tr>
+                <tr><td colspan="6">Nenhum pagamento registrado.</td></tr>
                 {% endfor %}
             {% endfor %}
         </tbody>
