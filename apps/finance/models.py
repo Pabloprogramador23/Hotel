@@ -10,6 +10,9 @@ class Invoice(models.Model):
     def __str__(self):
         return f"Invoice {self.id} - Reservation {self.reservation.id}"
 
+    def total(self):
+        return self.amount - self.discount
+
 class Payment(models.Model):
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='payments')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
@@ -24,7 +27,9 @@ class Payment(models.Model):
         super().save(*args, **kwargs)
         # Atualiza status da fatura após pagamento
         total_paid = sum(p.amount for p in self.invoice.payments.all())
-        if total_paid >= self.invoice.amount:
+        # Considera desconto no cálculo do valor devido
+        valor_devido = self.invoice.amount - self.invoice.discount
+        if total_paid >= valor_devido:
             self.invoice.paid = True
             self.invoice.save()
         else:

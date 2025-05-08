@@ -29,7 +29,7 @@
                     R$ {{ invoice.amount|floatformat:2 }}
                     {% if invoice.discount and invoice.discount > 0 %}
                         <br><span class="text-success">Desconto: -R$ {{ invoice.discount|floatformat:2 }}</span>
-                        <br><strong>Total: R$ {{ invoice.amount|floatformat:2|add:"-"|add:invoice.discount|floatformat:2 }}</strong>
+                        <br><strong>Total: R$ {{ invoice.total|floatformat:2 }}</strong>
                     {% endif %}
                 </td>
                 <td>{{ invoice.issued_at|date:'d/m/Y H:i' }}</td>
