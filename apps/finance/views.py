@@ -309,10 +309,15 @@ def delete_payment(request, payment_id):
     Exclui um pagamento individual de uma fatura.
     """
     payment = get_object_or_404(Payment, id=payment_id)
-    reservation_id = payment.invoice.reservation.id if payment.invoice.reservation else None
+    invoice = payment.invoice
+    reservation_id = invoice.reservation.id if invoice.reservation else None
     if request.method == 'POST':
         try:
             payment.delete()
+            # Recalcula o total pago e atualiza o status da fatura
+            total_paid = sum(p.amount for p in invoice.payments.all())
+            invoice.paid = total_paid >= invoice.amount
+            invoice.save()
             messages.success(request, 'Pagamento removido com sucesso!')
         except Exception as e:
             messages.error(request, f'Erro ao remover pagamento: {e}')
@@ -321,3 +326,21 @@ def delete_payment(request, payment_id):
         return redirect('/')
     # Não permite GET para segurança
     return redirect('/')
+@login_required
+@require_POST
+def apply_discount(request, invoice_id):
+    """
+    Aplica um desconto a uma fatura específica.
+    """
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    try:
+        discount = float(request.POST.get('discount', 0))
+        if discount < 0 or discount > float(invoice.amount):
+            messages.error(request, 'Valor de desconto inválido.')
+        else:
+            invoice.discount = discount
+            invoice.save()
+            messages.success(request, f'Desconto de R$ {discount:.2f} aplicado com sucesso!')
+    except Exception as e:
+        messages.error(request, f'Erro ao aplicar desconto: {e}')
+    return redirect(reverse('finance:reservation_invoices', args=[invoice.reservation.id]))

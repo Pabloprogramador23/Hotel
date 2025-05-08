@@ -485,3 +485,11 @@ main {
     border-radius: 4px;
     margin-right: 5px;
 }
+
+/* Garante que o botão de alternância de tema fique fixo no topo direito da tela, acima de qualquer outro conteúdo */
+#theme-toggle {
+    position: fixed !important;
+    top: 1rem !important;
+    right: 1rem !important;
+    z-index: 9999 !important;
+}

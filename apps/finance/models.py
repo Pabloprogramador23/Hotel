@@ -5,6 +5,7 @@ class Invoice(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     issued_at = models.DateTimeField(auto_now_add=True)
     paid = models.BooleanField(default=False)
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Desconto")
 
     def __str__(self):
         return f"Invoice {self.id} - Reservation {self.reservation.id}"

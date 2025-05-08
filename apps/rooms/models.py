@@ -11,7 +11,7 @@ class Room(models.Model):
 
     number = models.CharField(max_length=10, unique=True)
     room_type = models.CharField(max_length=10, choices=ROOM_TYPES)
-    status = models.CharField(max_length=10, default='clean')
+    status = models.CharField(max_length=20, default='clean')
     description = models.TextField(blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
