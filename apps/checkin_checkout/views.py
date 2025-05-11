@@ -175,10 +175,10 @@ def list_expected_arrivals(request):
 @login_required
 def list_expected_departures(request):
     """
-    Lista todas as reservas que têm check-out esperado para hoje
+    Lista todas as reservas que têm check-out esperado para hoje ou datas anteriores (atrasadas)
     """
     today = timezone.now().date()
-    expected_departures = Reservation.objects.filter(check_out_date=today, checked_in=True, checked_out=False)
+    expected_departures = Reservation.objects.filter(check_out_date__lte=today, checked_in=True, checked_out=False)
     
     departures_data = [{
         'id': reservation.id,

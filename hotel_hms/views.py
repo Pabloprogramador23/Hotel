@@ -30,7 +30,7 @@ def home(request):
     ).select_related('room')
     
     pending_checkouts_list = Reservation.objects.filter(
-        check_out_date=today,
+        check_out_date__lte=today,
         status='checked_in'
     ).select_related('room')
     
