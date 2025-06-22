@@ -232,10 +232,17 @@
                                 </a>
                             {% endif %}
                         </div>                        <div class="col-6">
-                            <a href="{% url 'finance:extra_income_list' %}" class="btn btn-success d-flex flex-column align-items-center p-3 h-100 w-100">
-                                <i class="fas fa-plus-circle fa-2x mb-2"></i>
-                                <span>Receitas Avulsas</span>
-                            </a>
+                            {% if user.is_authenticated %}
+                                <a href="{% url 'finance:extra_income_list' %}" class="btn btn-success d-flex flex-column align-items-center p-3 h-100 w-100">
+                                    <i class="fas fa-plus-circle fa-2x mb-2"></i>
+                                    <span>Receitas Avulsas</span>
+                                </a>
+                            {% else %}
+                                <a href="#" class="btn btn-success d-flex flex-column align-items-center p-3 h-100 w-100" data-bs-toggle="modal" data-bs-target="#loginRequiredModal">
+                                    <i class="fas fa-plus-circle fa-2x mb-2"></i>
+                                    <span>Receitas Avulsas</span>
+                                </a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
