@@ -15,4 +15,8 @@ urlpatterns = [
     path('expenses/<int:expense_id>/delete/', views.delete_expense, name='delete_expense'),
     path('payments/<int:payment_id>/delete/', views.delete_payment, name='delete_payment'),
     path('invoices/<int:invoice_id>/apply-discount/', views.apply_discount, name='apply_discount'),
+
+    # URLs para receitas avulsas
+    path('extra-income/', views.extra_income_list, name='extra_income_list'),
+    path('extra-income/create/', views.create_extra_income, name='create_extra_income'),
 ]

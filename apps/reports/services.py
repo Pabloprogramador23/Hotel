@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.db.models import Q, Sum
 from django.db.models.functions import TruncDate
 from django.db import connection
-from apps.finance.models import Invoice, Expense
+from apps.finance.models import Invoice, Expense, ExtraIncome
 
 def calculate_revenue_data(start_date: date, end_date: date) -> Tuple[List[Dict[str, Any]], float, float, float]:
     """
@@ -66,8 +66,7 @@ def calculate_revenue_data(start_date: date, end_date: date) -> Tuple[List[Dict[
         revenue_data = list(
             query
             .values('issued_at__date')
-            .annotate(
-                date=TruncDate('issued_at'),
+            .annotate(                date=TruncDate('issued_at'),
                 total_amount=Sum('amount'),
                 paid_amount=Sum('amount', filter=Q(paid=True)),
                 pending_amount=Sum('amount', filter=Q(paid=False))
@@ -78,6 +77,49 @@ def calculate_revenue_data(start_date: date, end_date: date) -> Tuple[List[Dict[
     total_revenue = sum(day['total_amount'] or 0 for day in revenue_data)
     total_paid = sum(day['paid_amount'] or 0 for day in revenue_data)
     total_pending = sum(day['pending_amount'] or 0 for day in revenue_data)
+    
+    # Adicionar receitas avulsas - sempre são consideradas pagas
+    extra_income_query = ExtraIncome.objects
+    if start_date == end_date:
+        extra_income_query = extra_income_query.filter(received_date=start_date)
+    else:
+        extra_income_query = extra_income_query.filter(received_date__gte=start_date, received_date__lte=end_date)
+    
+    # Agrupar receitas avulsas por data
+    if is_sqlite:
+        extra_incomes = list(extra_income_query.values('received_date', 'amount'))
+        
+        # Incorporar receitas avulsas nos dados de receita
+        for income in extra_incomes:
+            date_value = income['received_date']
+            date_str = date_value.strftime('%Y-%m-%d')
+            
+            amount = income['amount']
+            
+            if date_str in revenue_by_date:
+                # Adicionar a receitas existentes
+                revenue_by_date[date_str]['total_amount'] += amount
+                revenue_by_date[date_str]['paid_amount'] += amount  # Receitas avulsas são sempre pagas
+            else:
+                # Criar nova entrada para esta data
+                revenue_by_date[date_str] = {
+                    'issued_at__date': date_value,
+                    'date': date_value,
+                    'total_amount': amount,
+                    'paid_amount': amount,
+                    'pending_amount': 0
+                }
+        
+        # Refazer a lista ordenada
+        revenue_data = list(revenue_by_date.values())
+        revenue_data.sort(key=lambda x: x['date'])
+    
+    # Recalcular totais após incluir receitas avulsas
+    total_extra_income = extra_income_query.aggregate(total=Sum('amount'))['total'] or 0
+    
+    # Adicionar ao total
+    total_revenue += total_extra_income
+    total_paid += total_extra_income  # Receitas avulsas são sempre consideradas pagas
     
     return revenue_data, total_revenue, total_paid, total_pending
 

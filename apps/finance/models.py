@@ -63,3 +63,18 @@ class Expense(models.Model):
     
     def __str__(self):
         return f"{self.description} - R$ {self.amount} ({self.get_category_display()})"
+
+class ExtraIncome(models.Model):
+    description = models.CharField(max_length=255, verbose_name="Descrição")
+    amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Valor")
+    date_created = models.DateField(auto_now_add=True, verbose_name="Data de Registro")
+    received_date = models.DateField(verbose_name="Data de Recebimento")
+    method = models.CharField(max_length=50, verbose_name="Método de Recebimento")
+    notes = models.TextField(blank=True, null=True, verbose_name="Observações")
+
+    class Meta:
+        verbose_name = "Receita Avulsa"
+        verbose_name_plural = "Receitas Avulsas"
+
+    def __str__(self):
+        return f"{self.description} - R$ {self.amount}"

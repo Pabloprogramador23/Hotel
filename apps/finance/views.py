@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Invoice, Payment, Expense
+from .models import Invoice, Payment, Expense, ExtraIncome
 from apps.reservations.models import Reservation
 
 @login_required
@@ -344,3 +344,40 @@ def apply_discount(request, invoice_id):
     except Exception as e:
         messages.error(request, f'Erro ao aplicar desconto: {e}')
     return redirect(reverse('finance:reservation_invoices', args=[invoice.reservation.id]))
+
+@login_required
+def extra_income_list(request):
+    """
+    Lista todas as receitas avulsas
+    """
+    incomes = ExtraIncome.objects.all().order_by('-received_date')
+    return render(request, 'finance/extra_income_list.html', {'incomes': incomes})
+
+@login_required
+def create_extra_income(request):
+    """
+    Cria uma nova receita avulsa
+    """
+    if request.method == 'POST':
+        description = request.POST.get('description')
+        amount = request.POST.get('amount')
+        received_date = request.POST.get('received_date')
+        method = request.POST.get('method')
+        notes = request.POST.get('notes')
+        if not description or not amount or not received_date or not method:
+            messages.error(request, 'Preencha todos os campos obrigatórios.')
+            return redirect('finance:create_extra_income')
+        try:
+            ExtraIncome.objects.create(
+                description=description,
+                amount=amount,
+                received_date=received_date,
+                method=method,
+                notes=notes
+            )
+            messages.success(request, 'Receita avulsa registrada com sucesso!')
+            return redirect('finance:extra_income_list')
+        except Exception as e:
+            messages.error(request, f'Erro ao registrar receita: {e}')
+            return redirect('finance:create_extra_income')
+    return render(request, 'finance/create_extra_income.html')

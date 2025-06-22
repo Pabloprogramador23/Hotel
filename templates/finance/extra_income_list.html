@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Receitas Avulsas{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Receitas Avulsas</h2>
+    <a href="{% url 'finance:create_extra_income' %}" class="btn btn-success mb-3">Registrar Nova Receita</a>
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Descrição</th>
+                <th>Valor</th>
+                <th>Data de Recebimento</th>
+                <th>Método</th>
+                <th>Observações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for income in incomes %}
+            <tr>
+                <td>{{ income.description }}</td>
+                <td>R$ {{ income.amount|floatformat:2 }}</td>
+                <td>{{ income.received_date|date:'d/m/Y' }}</td>
+                <td>{{ income.method }}</td>
+                <td>{{ income.notes|default:'-' }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">Nenhuma receita avulsa registrada.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <a href="/" class="btn btn-secondary mt-3">Voltar para Dashboard</a>
+</div>
+{% endblock %}

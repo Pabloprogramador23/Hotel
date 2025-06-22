@@ -12,36 +12,36 @@
         <div class="col-12">
             <h2 class="reports-title">Sistema de Relatórios</h2>
         </div>
-    </div>
-
-    <div class="row">
+    </div>    <div class="row">
         <div class="col-12">
-            <nav class="nav nav-pills nav-fill mb-4 reports-nav">
-                <a class="nav-link {% if request.resolver_match.url_name == 'list' %}active{% endif %}" 
-                   href="{% url 'reports:list' %}">
-                   <i class="fas fa-list"></i> Lista de Relatórios
-                </a>
-                <a class="nav-link {% if request.resolver_match.url_name == 'occupancy' %}active{% endif %}" 
-                   href="{% url 'reports:occupancy' %}">
-                   <i class="fas fa-bed"></i> Relatório de Ocupação
-                </a>
-                <a class="nav-link {% if request.resolver_match.url_name == 'revenue' %}active{% endif %}" 
-                   href="{% url 'reports:revenue' %}">
-                   <i class="fas fa-chart-line"></i> Relatório de Receitas
-                </a>
-                <a class="nav-link {% if request.resolver_match.url_name == 'checkins' %}active{% endif %}" 
-                   href="{% url 'reports:checkins' %}">
-                   <i class="fas fa-sign-in-alt"></i> Relatório de Check-ins
-                </a>
-                <a class="nav-link {% if request.resolver_match.url_name == 'cash_flow' %}active{% endif %}" 
-                   href="{% url 'reports:cash_flow' %}">
-                   <i class="fas fa-money-bill-wave"></i> Relatório de Fluxo de Caixa
-                </a>
-                <a class="nav-link {% if request.resolver_match.url_name == 'financial_report' %}active{% endif %}" 
-                   href="{% url 'reports:financial_report' %}">
-                   <i class="fas fa-file-invoice-dollar"></i> Relatório Financeiro Detalhado
-                </a>
-            </nav>
+            <div class="reports-nav-container overflow-auto">
+                <nav class="nav nav-pills mb-4 reports-nav d-flex flex-nowrap">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'list' %}active{% endif %}" 
+                       href="{% url 'reports:list' %}">
+                       <i class="fas fa-list"></i> Lista
+                    </a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'occupancy' %}active{% endif %}" 
+                       href="{% url 'reports:occupancy' %}">
+                       <i class="fas fa-bed"></i> Ocupação
+                    </a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'revenue' %}active{% endif %}" 
+                       href="{% url 'reports:revenue' %}">
+                       <i class="fas fa-chart-line"></i> Receitas
+                    </a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'checkins' %}active{% endif %}" 
+                       href="{% url 'reports:checkins' %}">
+                       <i class="fas fa-sign-in-alt"></i> Check-ins
+                    </a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'cash_flow' %}active{% endif %}" 
+                       href="{% url 'reports:cash_flow' %}">
+                       <i class="fas fa-money-bill-wave"></i> Fluxo
+                    </a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'financial_report' %}active{% endif %}" 
+                       href="{% url 'reports:financial_report' %}">
+                       <i class="fas fa-file-invoice-dollar"></i> Financeiro
+                    </a>
+                </nav>
+            </div>
         </div>
     </div>
 

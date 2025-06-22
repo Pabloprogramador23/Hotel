@@ -246,7 +246,48 @@
                                 <td colspan="4" class="text-center py-3">Nenhuma receita recente registrada</td>
                             </tr>
                             {% endfor %}
+                        </tbody>                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Nova seção para Receitas Avulsas -->
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Receitas Avulsas Recentes</h5>
+                <a href="{% url 'finance:extra_income_list' %}" class="btn btn-sm btn-outline-success">Ver Todas</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Descrição</th>
+                                <th>Método</th>
+                                <th class="text-end">Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for income in recent_extra_incomes %}
+                            <tr>
+                                <td>{{ income.date|date:"d/m/Y" }}</td>
+                                <td>{{ income.description }}</td>
+                                <td>{{ income.method }}</td>
+                                <td class="text-end">R$ {{ income.amount|floatformat:2 }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-3">Nenhuma receita avulsa recente registrada</td>
+                            </tr>
+                            {% endfor %}
                         </tbody>
+                        <tfoot>
+                            <tr class="table-success">
+                                <td colspan="3" class="fw-bold">Total Receitas Avulsas:</td>
+                                <td class="text-end fw-bold">R$ {{ extra_income_total|floatformat:2 }}</td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>

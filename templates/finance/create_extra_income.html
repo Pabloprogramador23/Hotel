@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}Registrar Receita Avulsa{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Registrar Receita Avulsa</h2>
+    <form method="post" class="row g-3">
+        {% csrf_token %}
+        <div class="col-md-6">
+            <label for="description" class="form-label">Descrição</label>
+            <input type="text" name="description" id="description" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+            <label for="amount" class="form-label">Valor</label>
+            <input type="number" step="0.01" min="0.01" name="amount" id="amount" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+            <label for="received_date" class="form-label">Data de Recebimento</label>
+            <input type="date" name="received_date" id="received_date" class="form-control" required>
+        </div>
+        <div class="col-md-4">
+            <label for="method" class="form-label">Método de Recebimento</label>
+            <input type="text" name="method" id="method" class="form-control" required>
+        </div>
+        <div class="col-md-8">
+            <label for="notes" class="form-label">Observações</label>
+            <input type="text" name="notes" id="notes" class="form-control">
+        </div>
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary">Registrar Receita</button>
+            <a href="{% url 'finance:extra_income_list' %}" class="btn btn-secondary ms-2">Voltar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

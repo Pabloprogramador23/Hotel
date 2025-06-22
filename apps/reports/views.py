@@ -7,7 +7,7 @@ from decimal import Decimal
 from apps.rooms.models import Room
 from apps.checkin_checkout.models import CheckIn
 from apps.reservations.models import Reservation
-from apps.finance.models import Invoice, Expense
+from apps.finance.models import Invoice, Expense, ExtraIncome
 from .services import calculate_revenue_data, calculate_cash_flow_data, calculate_expense_data
 
 def report_list(request: HttpRequest) -> HttpResponse:
@@ -197,10 +197,14 @@ def financial_report(request: HttpRequest) -> HttpResponse:
             start_date = datetime.strptime(request.GET['start_date'], '%Y-%m-%d').date()
             end_date = datetime.strptime(request.GET['end_date'], '%Y-%m-%d').date()
         except (ValueError, TypeError):
-            pass  # Em caso de erro, mantém as datas padrão
-    
-    # Obter dados de receita
+            pass  # Em caso de erro, mantém as datas padrão    # Obter dados de receita (incluindo receitas avulsas)
     revenue_data, total_revenue, total_paid, total_pending = calculate_revenue_data(start_date, end_date)
+    
+    # Obter entradas de receitas avulsas para o período (somente para exibição na tabela)
+    extra_income_entries = ExtraIncome.objects.filter(
+        received_date__gte=start_date,
+        received_date__lte=end_date
+    ).order_by('-received_date')
     
     # Obter dados de despesa
     expense_data, total_expense, category_expenses = calculate_expense_data(start_date, end_date)
@@ -246,9 +250,7 @@ def financial_report(request: HttpRequest) -> HttpResponse:
             'expense': float(day_expense['total_amount']) if day_expense else 0
         })
         
-        current_date += timedelta(days=1)
-    
-    # Obter entradas de receita (faturas) para o período
+        current_date += timedelta(days=1)      # Obter entradas de receita (faturas) para o período
     revenue_entries = Invoice.objects.filter(
         issued_at__date__gte=start_date,
         issued_at__date__lte=end_date
@@ -263,7 +265,20 @@ def financial_report(request: HttpRequest) -> HttpResponse:
             'amount': float(invoice.amount),  # Converter para float para consistência
             'paid': invoice.paid,
             'guest_name': invoice.reservation.guest_name,
-            'room_number': invoice.reservation.room.number if invoice.reservation.room else 'N/A'
+            'room_number': invoice.reservation.room.number if invoice.reservation.room else 'N/A',
+            'type': 'Fatura de Reserva'
+        })
+        
+    # Adicionar receitas avulsas aos dados formatados
+    for income in extra_income_entries:
+        formatted_revenue_entries.append({
+            'id': income.id,
+            'date': income.received_date,
+            'amount': float(income.amount),
+            'paid': True,  # Receitas avulsas são sempre consideras pagas
+            'description': income.description,
+            'method': income.method,
+            'type': 'Receita Avulsa'
         })
     
     # Obter entradas de despesa para o período
@@ -316,10 +331,15 @@ def financial_consolidated_report(request: HttpRequest) -> HttpResponse:
             start_date = datetime.strptime(request.GET['start_date'], '%Y-%m-%d').date()
             end_date = datetime.strptime(request.GET['end_date'], '%Y-%m-%d').date()
         except (ValueError, TypeError):
-            pass
-    
-    # Obter dados de receita usando o serviço existente
+            pass    # Obter dados de receita usando o serviço existente (já inclui receitas avulsas)
     revenue_data, total_revenue, revenue_received, revenue_pending = calculate_revenue_data(start_date, end_date)
+    
+    # Obter receitas avulsas para o período (para exibição na tabela)
+    extra_income_entries = ExtraIncome.objects.filter(
+        received_date__gte=start_date,
+        received_date__lte=end_date
+    )
+    extra_income_total = extra_income_entries.aggregate(total=Sum('amount'))['total'] or 0
     
     # Obter dados de despesa usando o serviço existente
     expense_data, total_expenses, category_expenses = calculate_expense_data(start_date, end_date)
@@ -423,6 +443,22 @@ def financial_consolidated_report(request: HttpRequest) -> HttpResponse:
         payment_date__gte=start_date,
         payment_date__lte=end_date
     ).order_by('-payment_date')[:10]  # Limitar a 10 despesas mais recentes
+      # Obter receitas avulsas recentes
+    recent_extra_incomes = ExtraIncome.objects.filter(
+        received_date__gte=start_date,
+        received_date__lte=end_date
+    ).order_by('-received_date')[:10]
+    
+    # Formatar receitas avulsas para exibição
+    formatted_extra_incomes = []
+    for income in recent_extra_incomes:
+        formatted_extra_incomes.append({
+            'id': income.id,
+            'date': income.received_date,
+            'description': income.description,
+            'amount': float(income.amount),
+            'method': income.method
+        })
     
     # Preparar o contexto para o template
     context = {
@@ -441,7 +477,9 @@ def financial_consolidated_report(request: HttpRequest) -> HttpResponse:
         'daily_data': daily_data,
         'recent_invoices': formatted_invoices,
         'recent_expenses': recent_expenses,
-        'category_expenses': category_expenses
+        'category_expenses': category_expenses,
+        'extra_income_total': float(extra_income_total),
+        'recent_extra_incomes': formatted_extra_incomes
     }
     
     return render(request, 'reports/financial_consolidated.html', context)
