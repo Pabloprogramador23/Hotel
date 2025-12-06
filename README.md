@@ -151,11 +151,6 @@ A API RESTful está disponível em `/api/v1/` e inclui endpoints para:
 
 Documentação interativa disponível em `/api/docs/` (Swagger).
 
-## 🌐 Domínio em Produção
-
-O sistema está disponível em produção em:
-- https://pousadapajeusystem.space
-
 ## 👥 Contribuindo
 
 1. Faça um fork do projeto
