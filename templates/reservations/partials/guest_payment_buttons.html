@@ -1,0 +1,25 @@
+{% load static %}
+
+<!-- Botões de Pagamento (Compactos para Lista) -->
+<div class="d-flex gap-2 payment-actions align-items-center justify-content-end" style="min-width: 200px;">
+    {% if guest.is_paid %}
+    <!-- Estado Pago -->
+    <button class="btn btn-outline-success btn-sm fw-bold d-flex align-items-center gap-2"
+        hx-post="{% url 'toggle_payment_status' guest.id %}" hx-vals='{"method": "{{ guest.payment_method }}"}'
+        hx-target="#guest-actions-{{ guest.id }}">
+        <i class="fas fa-check-circle"></i>
+        PAGO ({{ guest.payment_method }})
+        <i class="fas fa-undo small ms-1 text-muted"></i>
+    </button>
+    {% else %}
+    <!-- Estado Pendente (Botões de Ação) -->
+    <button class="btn btn-sm btn-success fw-bold px-3 shadow-sm" hx-post="{% url 'toggle_payment_status' guest.id %}"
+        hx-vals='{"method": "PIX"}' hx-target="#guest-actions-{{ guest.id }}">
+        <i class="fa-brands fa-pix me-1"></i> PIX
+    </button>
+    <button class="btn btn-sm btn-primary fw-bold px-3 shadow-sm" hx-post="{% url 'toggle_payment_status' guest.id %}"
+        hx-vals='{"method": "DINHEIRO"}' hx-target="#guest-actions-{{ guest.id }}">
+        <i class="fas fa-money-bill-wave me-1"></i> MONEY
+    </button>
+    {% endif %}
+</div>

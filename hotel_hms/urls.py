@@ -18,11 +18,11 @@ from django.contrib import admin
 from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
-from .views import home
+from apps.reservations import views as reservation_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', home, name='home'),
+    path('', reservation_views.dashboard, name='home'),
     path('api/', include('apps.api.urls')),
     path('reservations/', include('apps.reservations.urls')),
     path('rooms/', include('apps.rooms.urls')),
@@ -33,9 +33,7 @@ urlpatterns = [
     path('settings/', include('apps.settings_manager.urls')),
 ]
 
-# Adiciona URLs para arquivos estáticos
-urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-
-# Adiciona URLs para arquivos de mídia apenas em ambiente de desenvolvimento
+# Adiciona URLs para arquivos estáticos e mídia apenas em ambiente de desenvolvimento
 if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

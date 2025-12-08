@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}Quarto {{ room.numero }}{% endblock %}
+
+{% block content %}
+<div class="space-y-10">
+    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+            <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Quarto {{ room.numero }}</p>
+            <h1 class="text-3xl font-bold text-slate-900">Detalhes do Quarto</h1>
+        </div>
+        <div class="flex flex-wrap gap-3">
+            <a href="{% url 'reservations:dashboard' %}"
+                class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 hover:border-slate-900">Voltar</a>
+            {% if not reservation %}
+            <button type="button" class="js-open-checkin inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow hover:bg-slate-800"
+                data-room="{{ room.id }}">Check-in Rápido</button>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if reservation %}
+    <div class="grid gap-6 lg:grid-cols-3">
+        <div class="lg:col-span-2 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Entrada</p>
+                    <p class="text-2xl font-semibold text-slate-900">{{ reservation.data_entrada|date:'d/m/Y H:i' }}</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Total devido</p>
+                    <p class="text-2xl font-semibold text-slate-900">R$ {{ total_due|floatformat:2 }}</p>
+                </div>
+            </div>
+            <p class="mt-4 text-sm text-slate-500">Atualize os status de pagamento em tempo real com os botões abaixo.</p>
+        </div>
+        <div class="rounded-2xl border border-emerald-100 bg-emerald-50 p-6">
+            <p class="text-xs uppercase tracking-[0.3em] text-emerald-600">Status</p>
+            <p class="mt-4 text-3xl font-bold text-emerald-900">Ocupado</p>
+            <p class="mt-2 text-sm text-emerald-800">Reserva ativa e sincronizada com o dashboard.</p>
+        </div>
+    </div>
+
+    {% include 'reservations/partials/guest_section.html' %}
+    {% else %}
+    <div class="rounded-2xl border border-dashed border-slate-200 bg-white px-8 py-16 text-center">
+        <h2 class="text-2xl font-semibold text-slate-900">Quarto livre</h2>
+        <p class="mt-4 text-slate-600">Inicie um check-in rápido para registrar a nova reserva.</p>
+        <button type="button"
+            class="js-open-checkin mt-6 inline-flex items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow hover:bg-slate-800"
+            data-room="{{ room.id }}">Check-in Rápido</button>
+    </div>
+    {% endif %}
+</div>
+
+{% include 'reservations/partials/quick_checkin_modal.html' %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% include 'reservations/partials/quick_checkin_modal_script.html' %}
+{% endblock %}

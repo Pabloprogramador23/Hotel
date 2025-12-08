@@ -1,0 +1,43 @@
+<script>
+(function () {
+    const modal = document.getElementById('quick-checkin-modal');
+    if (!modal) {
+        return;
+    }
+
+    const openers = document.querySelectorAll('.js-open-checkin');
+    const select = modal.querySelector('#quick-room-select');
+    const closeTriggers = modal.querySelectorAll('[data-modal-close]');
+
+    const showModal = (roomId) => {
+        modal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        if (select) {
+            select.value = roomId || '';
+        }
+        const nameInput = modal.querySelector('#quick-guest-name');
+        if (nameInput) {
+            nameInput.focus();
+        }
+    };
+
+    const hideModal = () => {
+        modal.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+    };
+
+    openers.forEach((button) => {
+        button.addEventListener('click', () => showModal(button.dataset.room || ''));
+    });
+
+    closeTriggers.forEach((trigger) => {
+        trigger.addEventListener('click', hideModal);
+    });
+
+    window.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+            hideModal();
+        }
+    });
+})();
+</script>

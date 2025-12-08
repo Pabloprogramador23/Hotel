@@ -220,7 +220,7 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Últimas Receitas</h5>
-                <a href="{% url 'finance:all_invoices' %}" class="btn btn-sm btn-outline-primary">Ver Todas</a>
+                <a href="{% url 'finance:cash_overview' %}" class="btn btn-sm btn-outline-primary">Ver Todas</a>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -234,12 +234,12 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for invoice in recent_invoices %}
+                            {% for entry in recent_revenues %}
                             <tr>
-                                <td>{{ invoice.date|date:"d/m/Y" }}</td>
-                                <td>{{ invoice.guest_name }}</td>
-                                <td class="text-end">R$ {{ invoice.amount|floatformat:2 }}</td>
-                                <td class="text-end">{% if invoice.paid %}<span class="badge bg-success">Pago</span>{% else %}<span class="badge bg-warning">Pendente</span>{% endif %}</td>
+                                <td>{{ entry.date|date:"d/m/Y" }}</td>
+                                <td>{{ entry.guest_name }}</td>
+                                <td class="text-end">R$ {{ entry.amount|floatformat:2 }}</td>
+                                <td class="text-end">{% if entry.paid %}<span class="badge bg-success">Pago</span>{% else %}<span class="badge bg-warning">Pendente</span>{% endif %}</td>
                             </tr>
                             {% empty %}
                             <tr>

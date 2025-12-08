@@ -57,10 +57,10 @@
     <div class="col-md-6">
         <div class="card mb-4">
             <div class="card-header">
-                <h5>Ocupação por Tipo de Quarto</h5>
+                <h5>Distribuição por Status</h5>
             </div>
             <div class="card-body">
-                <canvas id="roomTypeChart" height="250"></canvas>
+                <canvas id="statusChart" height="250"></canvas>
             </div>
         </div>
     </div>
@@ -81,26 +81,24 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5>Detalhes por Tipo de Quarto</h5>
+                <h5>Detalhes por Status</h5>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-striped table-hover mb-0">
                         <thead>
                             <tr>
-                                <th>Tipo de Quarto</th>
+                                <th>Status</th>
                                 <th>Total de Quartos</th>
-                                <th>Quartos Ocupados</th>
-                                <th>Taxa de Ocupação</th>
+                                <th>Percentual</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for stat in room_type_stats %}
+                            {% for stat in status_stats %}
                             <tr>
-                                <td>{{ stat.room_type|default:"Não especificado" }}</td>
+                                <td>{{ stat.status }}</td>
                                 <td>{{ stat.total }}</td>
-                                <td>{{ stat.occupied }}</td>
-                                <td>{{ stat.occupied|floatformat:0 }}% ({{ stat.occupied }}/{{ stat.total }})</td>
+                                <td>{{ stat.percentage|floatformat:1 }}%</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -122,25 +120,18 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Gráfico de ocupação por tipo de quarto
-    const roomTypeCtx = document.getElementById('roomTypeChart').getContext('2d');
-    new Chart(roomTypeCtx, {
+    // Gráfico de distribuição por status
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    new Chart(statusCtx, {
         type: 'bar',
         data: {
-            labels: [{% for stat in room_type_stats %}'{{ stat.room_type|default:"Não especificado" }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            labels: [{% for stat in status_stats %}'{{ stat.status }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
             datasets: [
                 {
                     label: 'Total de Quartos',
-                    data: [{% for stat in room_type_stats %}{{ stat.total }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    data: [{% for stat in status_stats %}{{ stat.total }}{% if not forloop.last %}, {% endif %}{% endfor %}],
                     backgroundColor: 'rgba(54, 162, 235, 0.5)',
                     borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
-                },
-                {
-                    label: 'Quartos Ocupados',
-                    data: [{% for stat in room_type_stats %}{{ stat.occupied }}{% if not forloop.last %}, {% endif %}{% endfor %}],
-                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
-                    borderColor: 'rgba(255, 99, 132, 1)',
                     borderWidth: 1
                 }
             ]

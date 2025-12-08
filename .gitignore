@@ -28,6 +28,7 @@ env/
 
 # Arquivos de configuração e credenciais
 .env
+Caddyfile
 .env.*
 *.env
 *.secret
@@ -37,6 +38,9 @@ env/
 *.pfx
 *.p12
 secrets.json
+db.sqlite3
+hotel_media/
+.env
 settings_local.py
 settings_dev.py
 settings_test.py

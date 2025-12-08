@@ -1,202 +1,148 @@
-from django.shortcuts import render, get_object_or_404, redirect
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
-from django.db import transaction
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.urls import reverse
-from django.utils import timezone
+from decimal import Decimal
 
-from .models import Invoice, Payment, Expense, ExtraIncome
-from apps.reservations.models import Reservation
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.db.models import Sum
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.views.decorators.http import require_POST
+
+from apps.reservations.models import Reservation, ReservationGuest
+
+from .models import Expense, ExtraIncome, LedgerAdjustment
+
+
+def _reservation_totals(reservation: Reservation) -> dict:
+    hospedes = reservation.hospedes.all()
+    total = hospedes.aggregate(total=Sum('valor_devido'))['total'] or Decimal('0')
+    pago = hospedes.filter(pago=True).aggregate(total=Sum('valor_devido'))['total'] or Decimal('0')
+    return {
+        'total': total,
+        'pago': pago,
+        'pendente': total - pago,
+    }
+
 
 @login_required
-def list_invoices(request, reservation_id=None):
-    """
-    Lista todas as faturas, ou apenas as de uma reserva específica
-    """
-    if reservation_id:
-        invoices = Invoice.objects.filter(reservation_id=reservation_id)
-    else:
-        invoices = Invoice.objects.all()
-    
-    invoices_data = [{
-        'id': invoice.id,
-        'reservation_id': invoice.reservation_id,
-        'amount': float(invoice.amount),
-        'issued_at': invoice.issued_at.strftime('%Y-%m-%d %H:%M:%S'),
-        'paid': invoice.paid
-    } for invoice in invoices]
-    
-    return JsonResponse({'invoices': invoices_data})
+def reservation_balances(request):
+    reservas = (
+        Reservation.objects.all()
+        .select_related('room')
+        .prefetch_related('hospedes')
+        .order_by('-data_entrada')
+    )
+
+    payload = []
+    for reserva in reservas:
+        totais = _reservation_totals(reserva)
+        payload.append({
+            'id': reserva.id,
+            'room': reserva.room.numero,
+            'guests': [hospede.nome for hospede in reserva.hospedes.all()],
+            'total': float(totais['total']),
+            'paid': float(totais['pago']),
+            'pending': float(totais['pendente']),
+            'active': reserva.ocupando,
+        })
+
+    return JsonResponse({'reservations': payload})
+
+
+@login_required
+def cash_overview(request):
+    today = timezone.localdate()
+
+    pix = (
+        ReservationGuest.objects.filter(
+            pago=True,
+            metodo_pagamento=ReservationGuest.MetodoPagamento.PIX,
+            atualizado_em__date=today,
+        ).aggregate(total=Sum('valor_devido'))['total']
+        or Decimal('0')
+    )
+
+    dinheiro = (
+        ReservationGuest.objects.filter(
+            pago=True,
+            metodo_pagamento=ReservationGuest.MetodoPagamento.DINHEIRO,
+            atualizado_em__date=today,
+        ).aggregate(total=Sum('valor_devido'))['total']
+        or Decimal('0')
+    )
+
+    ajustes = LedgerAdjustment.objects.filter(criado_em__date=today)
+    creditos = ajustes.filter(tipo=LedgerAdjustment.Tipo.CREDITO).aggregate(total=Sum('valor'))['total'] or Decimal('0')
+    debitos = ajustes.filter(tipo=LedgerAdjustment.Tipo.DEBITO).aggregate(total=Sum('valor'))['total'] or Decimal('0')
+
+    extras = ExtraIncome.objects.filter(received_date=today).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    despesas = Expense.objects.filter(payment_date=today).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+
+    return JsonResponse({
+        'pix': float(pix),
+        'dinheiro': float(dinheiro),
+        'ajustes_credito': float(creditos),
+        'ajustes_debito': float(debitos),
+        'extras': float(extras),
+        'despesas': float(despesas),
+    })
+
+
+@login_required
+def list_adjustments(request):
+    ajustes = LedgerAdjustment.objects.select_related('reservation').order_by('-criado_em')[:100]
+    data = [{
+        'id': ajuste.id,
+        'descricao': ajuste.descricao,
+        'tipo': ajuste.get_tipo_display(),
+        'valor': float(ajuste.valor),
+        'metodo': ajuste.metodo,
+        'reservation': ajuste.reservation_id,
+        'created_at': ajuste.criado_em.isoformat(),
+    } for ajuste in ajustes]
+    return JsonResponse({'adjustments': data})
+
 
 @login_required
 @require_POST
-def create_invoice(request, reservation_id):
-    """
-    Cria uma nova fatura para uma reserva
-    """
+def create_adjustment(request):
     try:
-        amount = float(request.POST.get('amount', 0))
-        if amount <= 0:
-            return JsonResponse({
-                'success': False,
-                'message': 'O valor da fatura deve ser maior que zero'
-            }, status=400)
-            
-        reservation = get_object_or_404(Reservation, id=reservation_id)
-        
-        invoice = Invoice.objects.create(
+        tipo = request.POST.get('tipo', LedgerAdjustment.Tipo.CREDITO)
+        descricao = request.POST.get('descricao', 'Ajuste manual')
+        valor = Decimal(request.POST.get('valor', '0'))
+        metodo = request.POST.get('metodo')
+        reservation_id = request.POST.get('reservation_id')
+
+        if valor == 0:
+            return JsonResponse({'success': False, 'message': 'Informe um valor válido.'}, status=400)
+
+        reservation = None
+        if reservation_id:
+            reservation = get_object_or_404(Reservation, id=reservation_id)
+
+        ajuste = LedgerAdjustment.objects.create(
             reservation=reservation,
-            amount=amount
+            descricao=descricao,
+            tipo=tipo,
+            valor=valor,
+            metodo=metodo,
         )
-        
+
         return JsonResponse({
             'success': True,
-            'message': 'Fatura criada com sucesso',
-            'invoice_id': invoice.id
+            'adjustment_id': ajuste.id,
         })
-        
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'message': f'Erro ao criar fatura: {str(e)}'
-        }, status=500)
+    except Exception as exc:
+        return JsonResponse({'success': False, 'message': str(exc)}, status=400)
+
 
 @login_required
 @require_POST
-def mark_invoice_paid(request, invoice_id):
-    """
-    Adiciona um pagamento completo para uma fatura, impedindo duplicidade.
-    """
-    try:
-        with transaction.atomic():
-            invoice = get_object_or_404(Invoice, id=invoice_id)
+def delete_adjustment(request, adjustment_id):
+    ajuste = get_object_or_404(LedgerAdjustment, id=adjustment_id)
+    ajuste.delete()
+    return JsonResponse({'success': True})
 
-            if invoice.paid:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Esta fatura já está paga'
-                }, status=400)
-
-            # Verifica se já existe um pagamento automático igual
-            exists = Payment.objects.filter(
-                invoice=invoice,
-                method='Sistema',
-                notes='Pagamento completo via botão "Marcar como Paga"'
-            ).exists()
-            if exists:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Já existe um pagamento automático registrado para esta fatura.'
-                }, status=400)
-
-            # Cria o pagamento automático
-            Payment.objects.create(
-                invoice=invoice,
-                amount=invoice.amount,
-                method='Sistema',
-                notes='Pagamento completo via botão "Marcar como Paga"'
-            )
-
-            # O status da fatura será atualizado automaticamente pelo método save() do Payment
-
-            return JsonResponse({
-                'success': True,
-                'message': 'Pagamento registrado e fatura atualizada com sucesso'
-            })
-
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'message': f'Erro ao processar pagamento: {str(e)}'
-        }, status=500)
-
-@login_required
-def reservation_invoices_view(request, reservation_id):
-    reservation = get_object_or_404(Reservation, id=reservation_id)
-    invoices = reservation.invoices.all()
-    if request.method == 'POST':
-        if request.POST.get('add_payment'):
-            invoice_id = request.POST.get('invoice_id')
-            amount = request.POST.get('amount')
-            method = request.POST.get('method')
-            notes = request.POST.get('notes')
-            invoice = get_object_or_404(Invoice, id=invoice_id, reservation=reservation)
-            try:
-                Payment.objects.create(
-                    invoice=invoice,
-                    amount=amount,
-                    method=method,
-                    notes=notes
-                )
-                messages.success(request, 'Pagamento registrado com sucesso!')
-            except Exception as e:
-                messages.error(request, f'Erro ao registrar pagamento: {e}')
-            return redirect(reverse('finance:reservation_invoices', args=[reservation_id]))
-        elif request.POST.get('create_extra_invoice'):
-            extra_amount = request.POST.get('extra_amount')
-            extra_notes = request.POST.get('extra_notes')
-            try:
-                Invoice.objects.create(
-                    reservation=reservation,
-                    amount=extra_amount
-                    # O campo paid permanece False por padrão
-                )
-                messages.success(request, 'Fatura extra criada com sucesso!')
-            except Exception as e:
-                messages.error(request, f'Erro ao criar fatura extra: {e}')
-            return redirect(reverse('finance:reservation_invoices', args=[reservation_id]))
-        else:
-            # Mudança aqui: ao invés de marcar diretamente como paga,
-            # registramos um pagamento completo
-            invoice_id = request.POST.get('invoice_id')
-            invoice = get_object_or_404(Invoice, id=invoice_id, reservation=reservation)
-            if not invoice.paid:
-                try:
-                    # Criar um pagamento que cobre o valor total da fatura
-                    Payment.objects.create(
-                        invoice=invoice,
-                        amount=invoice.amount,
-                        method='Sistema',
-                        notes='Pagamento completo via botão "Marcar como Paga"'
-                    )
-                    messages.success(request, 'Pagamento registrado e fatura atualizada com sucesso!')
-                except Exception as e:
-                    messages.error(request, f'Erro ao processar pagamento: {e}')
-            else:
-                messages.info(request, 'Esta fatura já está paga.')
-            return redirect(reverse('finance:reservation_invoices', args=[reservation_id]))
-    return render(request, 'finance/invoice_list.html', {'reservation': reservation, 'invoices': invoices})
-
-@login_required
-def list_all_invoices_view(request):
-    """
-    Exibe todas as faturas em uma página HTML formatada
-    """
-    invoices = Invoice.objects.all().order_by('-issued_at')
-    
-    # Agrupar faturas por reserva para uma visualização melhor organizada
-    reservations = {}
-    for invoice in invoices:
-        if invoice.reservation_id not in reservations:
-            reservations[invoice.reservation_id] = {
-                'reservation': invoice.reservation,
-                'invoices': [],
-                'total_amount': 0  # Inicializa o total
-            }
-        reservations[invoice.reservation_id]['invoices'].append(invoice)
-        # Soma o valor ao total da reserva
-        reservations[invoice.reservation_id]['total_amount'] += float(invoice.amount)
-    
-    context = {
-        'reservations': reservations.values(),
-        'total_value': sum(float(invoice.amount) for invoice in invoices),
-        'total_paid': sum(float(invoice.amount) for invoice in invoices if invoice.paid),
-        'total_pending': sum(float(invoice.amount) for invoice in invoices if not invoice.paid),
-    }
-    
-    return render(request, 'finance/all_invoices.html', context)
 
 @login_required
 def expense_list(request):
@@ -302,48 +248,6 @@ def delete_expense(request, expense_id):
             messages.error(request, f'Erro ao excluir despesa: {str(e)}')
     
     return redirect('finance:expense_list')
-
-@login_required
-def delete_payment(request, payment_id):
-    """
-    Exclui um pagamento individual de uma fatura.
-    """
-    payment = get_object_or_404(Payment, id=payment_id)
-    invoice = payment.invoice
-    reservation_id = invoice.reservation.id if invoice.reservation else None
-    if request.method == 'POST':
-        try:
-            payment.delete()
-            # Recalcula o total pago e atualiza o status da fatura
-            total_paid = sum(p.amount for p in invoice.payments.all())
-            invoice.paid = total_paid >= invoice.amount
-            invoice.save()
-            messages.success(request, 'Pagamento removido com sucesso!')
-        except Exception as e:
-            messages.error(request, f'Erro ao remover pagamento: {e}')
-        if reservation_id:
-            return redirect(reverse('finance:reservation_invoices', args=[reservation_id]))
-        return redirect('/')
-    # Não permite GET para segurança
-    return redirect('/')
-@login_required
-@require_POST
-def apply_discount(request, invoice_id):
-    """
-    Aplica um desconto a uma fatura específica.
-    """
-    invoice = get_object_or_404(Invoice, id=invoice_id)
-    try:
-        discount = float(request.POST.get('discount', 0))
-        if discount < 0 or discount > float(invoice.amount):
-            messages.error(request, 'Valor de desconto inválido.')
-        else:
-            invoice.discount = discount
-            invoice.save()
-            messages.success(request, f'Desconto de R$ {discount:.2f} aplicado com sucesso!')
-    except Exception as e:
-        messages.error(request, f'Erro ao aplicar desconto: {e}')
-    return redirect(reverse('finance:reservation_invoices', args=[invoice.reservation.id]))
 
 @login_required
 def extra_income_list(request):

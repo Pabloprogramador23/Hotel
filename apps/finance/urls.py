@@ -1,22 +1,18 @@
 from django.urls import path
+
 from . import views
 
 urlpatterns = [
-    path('invoices/', views.list_invoices, name='list_invoices'),
-    path('all-invoices/', views.list_all_invoices_view, name='all_invoices'),
-    path('reservations/<int:reservation_id>/invoices/', views.list_invoices, name='list_reservation_invoices'),
-    path('reservations/<int:reservation_id>/create-invoice/', views.create_invoice, name='create_invoice'),
-    path('invoices/<int:invoice_id>/mark-paid/', views.mark_invoice_paid, name='mark_invoice_paid'),
-    path('reservation/<int:reservation_id>/invoices/', views.reservation_invoices_view, name='reservation_invoices'),
-    
-    # URLs para despesas
+    path('cash-overview/', views.cash_overview, name='cash_overview'),
+    path('reservation-balances/', views.reservation_balances, name='reservation_balances'),
+    path('adjustments/', views.list_adjustments, name='list_adjustments'),
+    path('adjustments/create/', views.create_adjustment, name='create_adjustment'),
+    path('adjustments/<int:adjustment_id>/delete/', views.delete_adjustment, name='delete_adjustment'),
+
     path('expenses/', views.expense_list, name='expense_list'),
     path('expenses/create/', views.create_expense, name='create_expense'),
     path('expenses/<int:expense_id>/delete/', views.delete_expense, name='delete_expense'),
-    path('payments/<int:payment_id>/delete/', views.delete_payment, name='delete_payment'),
-    path('invoices/<int:invoice_id>/apply-discount/', views.apply_discount, name='apply_discount'),
 
-    # URLs para receitas avulsas
     path('extra-income/', views.extra_income_list, name='extra_income_list'),
     path('extra-income/create/', views.create_extra_income, name='create_extra_income'),
 ]

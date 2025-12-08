@@ -1,0 +1,300 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Painel Principal - Tablet
+<div id="roomDetailModalContainer"></div>
+
+<script>
+    document.body.addEventListener('htmx:afterSwap', function (evt) {
+        if (evt.target.id === 'roomDetailModalContainer') {
+            const modalEl = document.getElementById('roomDetailModal');
+            if (modalEl) {
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+        }
+    });
+
+    // Função global para o modal de quarto (migrado)
+    function openAddRoomModal() {
+        const modalEl = document.getElementById('roomModal');
+        if (modalEl) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+    }
+</script>
+
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid pb-5">
+    <!-- Cabeçalho com Totais e Ação -->
+    <div class="row g-4 mb-5 align-items-stretch">
+        <div class="col-md-4">
+            <div class="card bg-success text-white shadow border-0 rounded-4 h-100">
+                <div class="card-body d-flex align-items-center justify-content-between p-4">
+                    <div>
+                        <h2 class="card-title h5 opacity-75 mb-0">PIX (HOJE)</h2>
+                        <span class="display-5 fw-bold">R$ {{ pix_total|floatformat:2 }}</span>
+                    </div>
+                    <i class="fa-brands fa-pix fa-3x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-primary text-white shadow border-0 rounded-4 h-100">
+                <div class="card-body d-flex align-items-center justify-content-between p-4">
+                    <div>
+                        <h2 class="card-title h5 opacity-75 mb-0">DINHEIRO (HOJE)</h2>
+                        <span class="display-5 fw-bold">R$ {{ cash_total|floatformat:2 }}</span>
+                    </div>
+                    <i class="fas fa-money-bill-wave fa-3x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <button type="button"
+                class="btn btn-lg btn-dark w-100 h-100 rounded-4 shadow d-flex flex-column align-items-center justify-content-center border-0 p-4"
+                data-bs-toggle="modal" data-bs-target="#newReservationModal">
+                <i class="fas fa-plus-circle fa-3x mb-2 text-warning"></i>
+                <span class="fs-3 fw-bold">NOVA HOSPEDAGEM</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Grid de Quartos (Visão Geral) -->
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4">
+        {% for reservation in reservations %}
+        <div class="col">
+            <!-- Card Wrapper triggers Modal -->
+            <div class="card h-100 shadow-sm rounded-4 border-0 hover-lift transition-all cursor-pointer"
+                hx-get="{% url 'room_detail_modal' reservation.id %}" hx-target="#roomDetailModalContainer"
+                hx-swap="innerHTML" style="cursor: pointer;">
+
+                <div class="card-header bg-white py-3 rounded-top-4 border-bottom-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0 fs-3 fw-bold text-dark">Quarto {{ reservation.room.number }}</h3>
+                        <span class="badge bg-light text-dark border">{{ reservation.get_status_display }}</span>
+                    </div>
+                    <small class="text-muted text-truncate d-block mt-1">{{ reservation.guest_name }}</small>
+                </div>
+
+                <div class="card-body bg-light rounded-bottom-4">
+                    <div class="d-flex flex-column gap-2">
+                        {% for guest in reservation.guests.all %}
+                        <div class="d-flex align-items-center justify-content-between bg-white p-2 rounded border">
+                            <span class="text-dark fw-medium text-truncate" style="max-width: 70%;">{{ guest.name
+                                }}</span>
+                            {% if guest.is_paid %}
+                            <i class="fas fa-check-circle text-success fs-5"></i>
+                            {% else %}
+                            <i class="fas fa-clock text-warning fs-5"></i>
+                            {% endif %}
+                        </div>
+                        {% empty %}
+                        <span class="text-muted text-center small py-2">Sem hóspedes adicionais</span>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-3 text-center">
+                        <button class="btn btn-outline-primary btn-sm rounded-pill px-3 w-100">ABRIR QUARTO</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% empty %}
+<div class="col-12 text-center py-5">
+    <div class="alert alert-info">
+        <h4>Nenhuma reserva ativa no momento.</h4>
+    </div>
+</div>
+{% endfor %}
+</div>
+</div>
+
+<style>
+    .hover-lift:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+        cursor: pointer;
+    }
+
+    .transition-all {
+        transition: all 0.3s ease;
+    }
+</style>
+
+
+<!-- Botão Flutuante do Menu -->
+<button class="btn btn-dark rounded-circle shadow-lg position-fixed top-0 end-0 m-4" type="button"
+    data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu"
+    style="width: 60px; height: 60px; z-index: 1050;">
+    <i class="fas fa-bars fa-lg"></i>
+</button>
+
+<!-- Offcanvas Sidebar Menu -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="sidebarMenu" aria-labelledby="sidebarMenuLabel">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title fw-bold" id="sidebarMenuLabel">Menu do Sistema</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+        <div class="list-group list-group-flush">
+            <button class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3"
+                onclick="openAddRoomModal()" data-bs-dismiss="offcanvas">
+                <i class="fas fa-bed text-primary fa-fw"></i>
+                <div>
+                    <span class="d-block fw-bold">Novo Quarto</span>
+                    <small class="text-muted">Cadastrar um novo quarto no sistema</small>
+                </div>
+            </button>
+            <a href="#" hx-get="{% url 'reports:financial_consolidated' %}" hx-target="#genericModalContainer"
+                hx-swap="innerHTML" data-bs-dismiss="offcanvas"
+                class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3">
+                <i class="fas fa-chart-pie text-success fa-fw"></i>
+                <div>
+                    <span class="d-block fw-bold">Relatórios</span>
+                    <small class="text-muted">Ver estatísticas e gráficos</small>
+                </div>
+            </a>
+            <a href="#" hx-get="{% url 'settings_manager:pricing_modal' %}" hx-target="#genericModalContainer"
+                hx-swap="innerHTML" data-bs-dismiss="offcanvas"
+                class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-3">
+                <i class="fas fa-cog text-secondary fa-fw"></i>
+                <div>
+                    <span class="d-block fw-bold">Configurações</span>
+                    <small class="text-muted">Ajustes de Preços e Sistema</small>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nova Hospedagem -->
+<div class="modal fade" id="newReservationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nova Hospedagem Simplificada</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form hx-post="{% url 'create_quick_reservation' %}" hx-swap="none">
+                {% csrf_token %}
+                <div class="modal-body py-4">
+                    <div class="mb-3">
+                        <label class="form-label">Escolha o Quarto</label>
+                        <select name="room_id" class="form-select form-select-lg" required>
+                            <option value="" selected disabled>Selecione...</option>
+                            {% for room in available_rooms %}
+                            <option value="{{ room.id }}">Quarto {{ room.number }} ({{ room.get_room_type_display }})
+                            </option>
+                            {% empty %}
+                            <option disabled>Sem quartos disponíveis</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nome do Responsável</label>
+                        <input type="text" name="guest_name" class="form-control form-control-lg"
+                            placeholder="Ex: Visitante" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Valor Total (R$)</label>
+                        <input type="number" name="total_price" class="form-control form-control-lg" value="150.00"
+                            step="0.01" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                        onclick="location.reload()">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Confirmar Entrada</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Criar Quarto (Migrado) -->
+<div class="modal fade" id="roomModal" tabindex="-1" aria-labelledby="roomModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="roomModalLabel"><i class="fas fa-bed me-2"></i><span id="modalTitle">Novo
+                        Quarto</span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="roomForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="number" class="form-label">Número do Quarto</label>
+                        <input type="text" class="form-control" id="number" name="number" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="room_type" class="form-label">Tipo de Quarto</label>
+                        <select class="form-select" id="room_type" name="room_type" required>
+                            <option value="single">Solteiro</option>
+                            <option value="double">Casal</option>
+                            <option value="suite">Suíte</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="available">Disponível</option>
+                            <option value="clean">Limpo</option>
+                            <option value="dirty">Sujo</option>
+                            <option value="maintenance">Manutenção</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descrição</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="saveRoomBtn">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="roomDetailModalContainer"></div>
+<div id="genericModalContainer"></div>
+
+<script>
+    document.body.addEventListener('htmx:afterSwap', function (evt) {
+        // Handle Room Detail Modal
+        if (evt.target.id === 'roomDetailModalContainer') {
+            const modalEl = document.getElementById('roomDetailModal');
+            if (modalEl) {
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+        }
+        // Handle Financial/Generic Modal
+        if (evt.target.id === 'genericModalContainer') {
+            // Busca qualquer modal dentro do container (ex: financialModal)
+            const modalEl = evt.target.querySelector('.modal');
+            if (modalEl) {
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+        }
+    });
+
+    // Função global para o modal de quarto (migrado)
+    function openAddRoomModal() {
+        const modalEl = document.getElementById('roomModal');
+        if (modalEl) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+    }
+</script>
+
+{% endblock %}

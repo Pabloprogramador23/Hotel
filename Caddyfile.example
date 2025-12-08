@@ -1,0 +1,21 @@
+# Exemplo de configuração do Caddy para o projeto Hotel.
+# Preencha com seus domínios reais e serviços internos antes de usar em produção.
+
+# Site Hotel
+{DOMINIO_PRINCIPAL}, www.{DOMINIO_PRINCIPAL} {
+    reverse_proxy hotel_app:8001
+
+    handle_path /static/* {
+        root * /app/hotel_static
+        file_server
+    }
+
+    handle_path /media/* {
+        root * /app/hotel_media
+        file_server
+    }
+
+    log {
+        output stdout
+    }
+}

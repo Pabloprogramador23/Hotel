@@ -1,14 +1,15 @@
+from datetime import date, datetime, timedelta
+from decimal import Decimal
+
+from django.db.models import Count, Sum
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
-from django.db.models import Count, Q, Sum
-from django.db.models.functions import TruncDate
-from datetime import date, timedelta, datetime
-from decimal import Decimal
-from apps.rooms.models import Room
+
 from apps.checkin_checkout.models import CheckIn
-from apps.reservations.models import Reservation
-from apps.finance.models import Invoice, Expense, ExtraIncome
-from .services import calculate_revenue_data, calculate_cash_flow_data, calculate_expense_data
+from apps.finance.models import Expense, ExtraIncome, LedgerAdjustment
+from apps.reservations.models import Reservation, ReservationGuest, Room
+
+from .services import calculate_cash_flow_data, calculate_expense_data, calculate_revenue_data
 
 def report_list(request: HttpRequest) -> HttpResponse:
     """
@@ -43,18 +44,17 @@ def occupancy_report(request: HttpRequest) -> HttpResponse:
     """
     # Cálculos básicos de ocupação
     total_rooms = Room.objects.count()
-    occupied_rooms = Room.objects.filter(status='occupied').count()
+    occupied_rooms = Room.objects.filter(status=Room.Status.OCUPADO).count()
     occupancy_rate = (occupied_rooms / total_rooms * 100) if total_rooms > 0 else 0
-    
-    # Ocupação por tipo de quarto
-    room_type_stats = (
-        Room.objects.values('room_type')
-        .annotate(
-            total=Count('id'),
-            occupied=Count('id', filter=Q(status='occupied'))
-        )
-        .order_by('room_type')
-    )
+
+    status_stats = []
+    for value, label in Room.Status.choices:
+        count = Room.objects.filter(status=value).count()
+        status_stats.append({
+            'status': label,
+            'total': count,
+            'percentage': round((count / total_rooms * 100), 2) if total_rooms else 0,
+        })
 
     # Tendência de ocupação dos últimos 7 dias
     end_date = date.today()
@@ -62,7 +62,7 @@ def occupancy_report(request: HttpRequest) -> HttpResponse:
     occupancy_trend = []
     
     for single_date in (start_date + timedelta(n) for n in range(7)):
-        checkins = CheckIn.objects.filter(check_in_time__date=single_date).count()
+        checkins = CheckIn.objects.filter(started_at__date=single_date).count()
         occupancy_trend.append({
             'date': single_date,
             'checkins': checkins
@@ -72,7 +72,7 @@ def occupancy_report(request: HttpRequest) -> HttpResponse:
         'total_rooms': total_rooms,
         'occupied_rooms': occupied_rooms,
         'occupancy_rate': round(occupancy_rate, 2),
-        'room_type_stats': room_type_stats,
+        'status_stats': status_stats,
         'occupancy_trend': occupancy_trend
     }
     return render(request, 'reports/occupancy.html', context)
@@ -117,7 +117,7 @@ def checkins_report(request: HttpRequest) -> HttpResponse:
     Returns:
         HttpResponse: Página com lista de check-ins.
     """
-    checkins = CheckIn.objects.select_related('reservation').order_by('-check_in_time')
+    checkins = CheckIn.objects.select_related('reservation').order_by('-started_at')
     
     context = {
         'checkins': checkins
@@ -197,91 +197,84 @@ def financial_report(request: HttpRequest) -> HttpResponse:
             start_date = datetime.strptime(request.GET['start_date'], '%Y-%m-%d').date()
             end_date = datetime.strptime(request.GET['end_date'], '%Y-%m-%d').date()
         except (ValueError, TypeError):
-            pass  # Em caso de erro, mantém as datas padrão    # Obter dados de receita (incluindo receitas avulsas)
+            pass
+
     revenue_data, total_revenue, total_paid, total_pending = calculate_revenue_data(start_date, end_date)
-    
-    # Obter entradas de receitas avulsas para o período (somente para exibição na tabela)
     extra_income_entries = ExtraIncome.objects.filter(
         received_date__gte=start_date,
         received_date__lte=end_date
     ).order_by('-received_date')
-    
-    # Obter dados de despesa
     expense_data, total_expense, category_expenses = calculate_expense_data(start_date, end_date)
-    
-    # Garantir que os valores sejam do mesmo tipo antes de operações
-    if isinstance(total_revenue, Decimal):
-        if not isinstance(total_expense, Decimal):
-            total_expense = Decimal(str(total_expense))
-    else:
-        total_revenue = float(total_revenue)
-        total_expense = float(total_expense)
-    
-    # Calcular lucro líquido
+
+    total_revenue = float(total_revenue)
+    total_expense = float(total_expense)
     net_profit = total_revenue - total_expense
-    
-    # Garantir que todos os valores sejam float para cálculos percentuais
-    total_revenue_float = float(total_revenue)
-    total_paid_float = float(total_paid)
-    net_profit_float = float(net_profit)
-    
-    # Calcular margem de lucro (se houver receita)
-    profit_margin = (net_profit_float / total_revenue_float * 100) if total_revenue_float > 0 else 0
-    
-    # Calcular percentual de pagamentos recebidos e pendentes
-    payment_percentage = (total_paid_float / total_revenue_float * 100) if total_revenue_float > 0 else 0
-    pending_percentage = (float(total_pending) / total_revenue_float * 100) if total_revenue_float > 0 else 0
-    
-    # Construir dados diários para o gráfico
+
+    profit_margin = (net_profit / total_revenue * 100) if total_revenue > 0 else 0
+    payment_percentage = (total_paid / total_revenue * 100) if total_revenue > 0 else 0
+    pending_percentage = (total_pending / total_revenue * 100) if total_revenue > 0 else 0
+
     daily_data = []
     current_date = start_date
     while current_date <= end_date:
         date_str = current_date.strftime('%Y-%m-%d')
-        
-        # Encontrar receita deste dia
         day_revenue = next((item for item in revenue_data if item['date'].strftime('%Y-%m-%d') == date_str), None)
-        
-        # Encontrar despesa deste dia
         day_expense = next((item for item in expense_data if item['date'].strftime('%Y-%m-%d') == date_str), None)
-        
+
         daily_data.append({
             'date': current_date,
             'revenue': float(day_revenue['total_amount']) if day_revenue else 0,
             'expense': float(day_expense['total_amount']) if day_expense else 0
         })
-        
-        current_date += timedelta(days=1)      # Obter entradas de receita (faturas) para o período
-    revenue_entries = Invoice.objects.filter(
-        issued_at__date__gte=start_date,
-        issued_at__date__lte=end_date
-    ).select_related('reservation', 'reservation__room').order_by('-issued_at')
-    
-    # Formatar dados de faturas para o template
+        current_date += timedelta(days=1)
+
+    guest_entries = ReservationGuest.objects.filter(
+        criado_em__date__gte=start_date,
+        criado_em__date__lte=end_date
+    ).select_related('reserva__room').order_by('-criado_em')
+
     formatted_revenue_entries = []
-    for invoice in revenue_entries:
+    for guest in guest_entries:
         formatted_revenue_entries.append({
-            'id': invoice.id,
-            'date': invoice.issued_at.date(),
-            'amount': float(invoice.amount),  # Converter para float para consistência
-            'paid': invoice.paid,
-            'guest_name': invoice.reservation.guest_name,
-            'room_number': invoice.reservation.room.number if invoice.reservation.room else 'N/A',
-            'type': 'Fatura de Reserva'
+            'id': guest.id,
+            'date': guest.criado_em.date(),
+            'amount': float(guest.valor_devido),
+            'paid': guest.pago,
+            'guest_name': guest.nome,
+            'room_number': guest.reserva.room.numero if guest.reserva.room else 'N/A',
+            'type': 'Reserva',
         })
-        
-    # Adicionar receitas avulsas aos dados formatados
+
     for income in extra_income_entries:
         formatted_revenue_entries.append({
             'id': income.id,
             'date': income.received_date,
             'amount': float(income.amount),
-            'paid': True,  # Receitas avulsas são sempre consideras pagas
+            'paid': True,
             'description': income.description,
             'method': income.method,
             'type': 'Receita Avulsa'
         })
-    
-    # Obter entradas de despesa para o período
+
+    credit_adjustments = LedgerAdjustment.objects.filter(
+        tipo=LedgerAdjustment.Tipo.CREDITO,
+        criado_em__date__gte=start_date,
+        criado_em__date__lte=end_date,
+    ).order_by('-criado_em')
+
+    for ajuste in credit_adjustments:
+        formatted_revenue_entries.append({
+            'id': ajuste.id,
+            'date': ajuste.criado_em.date(),
+            'amount': float(ajuste.valor),
+            'paid': True,
+            'description': ajuste.descricao,
+            'method': ajuste.metodo,
+            'type': 'Ajuste Financeiro'
+        })
+
+    formatted_revenue_entries.sort(key=lambda entry: entry['date'], reverse=True)
+
     expense_entries = Expense.objects.filter(
         payment_date__gte=start_date,
         payment_date__lte=end_date
@@ -412,31 +405,23 @@ def financial_consolidated_report(request: HttpRequest) -> HttpResponse:
     
     # Ordenar dados por data
     daily_data.sort(key=lambda x: x['date'])
-    
-    # Calcular ticket médio (valor médio das faturas)
-    invoice_count = Invoice.objects.filter(
-        issued_at__date__gte=start_date,
-        issued_at__date__lte=end_date
-    ).count()
-    
-    avg_invoice_value = total_revenue_float / invoice_count if invoice_count > 0 else 0
-    
-    # Obter faturas recentes para exibição na tabela
-    recent_invoices = Invoice.objects.select_related('reservation').filter(
-        issued_at__date__gte=start_date,
-        issued_at__date__lte=end_date
-    ).order_by('-issued_at')[:10]  # Limitar a 10 faturas mais recentes
-    
-    # Formatar dados de faturas para o template
-    formatted_invoices = []
-    for invoice in recent_invoices:
-        formatted_invoices.append({
-            'id': invoice.id,
-            'date': invoice.issued_at.date(),
-            'guest_name': invoice.reservation.guest_name if invoice.reservation else 'N/A',
-            'amount': float(invoice.amount),
-            'paid': invoice.paid,
-        })
+
+    guest_charges = ReservationGuest.objects.filter(
+        criado_em__date__gte=start_date,
+        criado_em__date__lte=end_date
+    )
+
+    ticket_count = guest_charges.count()
+    avg_invoice_value = total_revenue_float / ticket_count if ticket_count > 0 else 0
+
+    recent_guest_entries = guest_charges.order_by('-criado_em')[:10]
+    recent_revenues = [{
+        'id': guest.id,
+        'date': guest.criado_em.date(),
+        'guest_name': guest.nome,
+        'amount': float(guest.valor_devido),
+        'paid': guest.pago,
+    } for guest in recent_guest_entries]
     
     # Obter despesas recentes para exibição na tabela
     recent_expenses = Expense.objects.filter(
@@ -475,11 +460,14 @@ def financial_consolidated_report(request: HttpRequest) -> HttpResponse:
         'expense_to_revenue_ratio': expense_to_revenue_ratio,
         'avg_invoice_value': avg_invoice_value,
         'daily_data': daily_data,
-        'recent_invoices': formatted_invoices,
+        'recent_revenues': recent_revenues,
         'recent_expenses': recent_expenses,
         'category_expenses': category_expenses,
         'extra_income_total': float(extra_income_total),
         'recent_extra_incomes': formatted_extra_incomes
     }
     
+    if request.headers.get('HX-Request'):
+        return render(request, 'reports/partials/financial_modal.html', context)
+        
     return render(request, 'reports/financial_consolidated.html', context)

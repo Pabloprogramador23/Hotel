@@ -1,16 +1,16 @@
 import pytest
 import os
+from decimal import Decimal
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.contrib.auth.models import User, Permission
 from django.contrib.contenttypes.models import ContentType
-from datetime import date, timedelta
+from django.utils import timezone
 
 from apps.reports.models import Report
 from apps.reports.services import calculate_revenue_data
-from apps.finance.models import Invoice
-from apps.reservations.models import Reservation
-from apps.rooms.models import Room
+from apps.finance.models import ExtraIncome, LedgerAdjustment
+from apps.reservations.models import Reservation, ReservationGuest, Room
 
 
 @pytest.mark.django_db
@@ -137,20 +137,41 @@ class TestReportViews:
 @pytest.mark.django_db
 def test_calculate_revenue_data_basic():
     """Testa cálculo de receita agregada para um período simples."""
-    room = Room.objects.create(number="101", room_type="single", status="clean")
-    reservation = Reservation.objects.create(
-        guest_name="Test Guest",
-        room=room,
-        check_in_date=date.today(),
-        check_out_date=date.today() + timedelta(days=2),
-        status="confirmed"
+    room = Room.objects.create(numero="101")
+    reservation = Reservation.objects.create(room=room)
+
+    ReservationGuest.objects.create(
+        reserva=reservation,
+        nome="Hóspede Pago",
+        valor_devido=Decimal('100.00'),
+        pago=True,
+        metodo_pagamento=ReservationGuest.MetodoPagamento.PIX,
     )
-    Invoice.objects.create(reservation=reservation, amount=100, paid=True)
-    Invoice.objects.create(reservation=reservation, amount=50, paid=False)
-    start = date.today()
-    end = date.today()
-    revenue_data, total_revenue, total_paid, total_pending = calculate_revenue_data(start, end)
-    assert total_revenue == 150
-    assert total_paid == 100
-    assert total_pending == 50
+    ReservationGuest.objects.create(
+        reserva=reservation,
+        nome="Hóspede Pendente",
+        valor_devido=Decimal('50.00'),
+        pago=False,
+        metodo_pagamento=ReservationGuest.MetodoPagamento.PENDENTE,
+    )
+
+    today = timezone.localdate()
+    ExtraIncome.objects.create(
+        description="Evento Corporativo",
+        amount=Decimal('200.00'),
+        received_date=today,
+        method="PIX",
+    )
+    LedgerAdjustment.objects.create(
+        reservation=reservation,
+        descricao="Consumo frigobar",
+        tipo=LedgerAdjustment.Tipo.CREDITO,
+        valor=Decimal('25.00'),
+    )
+
+    revenue_data, total_revenue, total_paid, total_pending = calculate_revenue_data(today, today)
+
+    assert total_revenue == pytest.approx(375.0)
+    assert total_paid == pytest.approx(325.0)
+    assert total_pending == pytest.approx(50.0)
     assert len(revenue_data) == 1

@@ -104,7 +104,7 @@
                 <div class="card mb-4">
                     <div class="card-header d-flex justify-content-between align-items-center flex-wrap">
                         <h5 class="mb-2 mb-sm-0">Receitas Detalhadas</h5>
-                        <a href="{% url 'finance:all_invoices' %}" class="btn btn-sm btn-outline-primary">
+                        <a href="{% url 'finance:cash_overview' %}" class="btn btn-sm btn-outline-primary">
                             <i class="fas fa-list me-1"></i> Ver Todas
                         </a>
                     </div>                    <div class="card-body p-0">
@@ -126,8 +126,14 @@
                                                 <span class="fw-bold text-success">Receita Avulsa</span>
                                                 <small class="d-block">{{ entry.description }}</small>
                                                 <small class="d-block text-muted">Método: {{ entry.method }}</small>
+                                            {% elif entry.type == 'Ajuste Financeiro' %}
+                                                <span class="fw-bold text-primary">Ajuste Financeiro</span>
+                                                <small class="d-block">{{ entry.description }}</small>
+                                                {% if entry.method %}
+                                                <small class="d-block text-muted">Método: {{ entry.method }}</small>
+                                                {% endif %}
                                             {% else %}
-                                                Fatura #{{ entry.id }} - {{ entry.guest_name }}
+                                                Reserva #{{ entry.id }} - {{ entry.guest_name }}
                                                 <small class="d-block text-muted">Quarto {{ entry.room_number }}</small>
                                             {% endif %}
                                         </td>

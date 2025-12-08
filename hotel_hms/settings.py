@@ -18,23 +18,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY')
 if not SECRET_KEY:
-    # Para desenvolvimento local, gera uma chave aleatória temporária
-    import secrets
-    SECRET_KEY = secrets.token_hex(32)
+    raise RuntimeError('SECRET_KEY não definido no ambiente. Configure e reinicie a aplicação.')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
 # Hosts autorizados
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 # Origens confiáveis para CSRF
-CSRF_TRUSTED_ORIGINS = [
-    'https://pousadapajeusystem.space',
-    'https://www.pousadapajeusystem.space',
-    'http://pousadapajeusystem.space',
-    'http://www.pousadapajeusystem.space',
-]
+_csrf_env = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_env.split(',') if o.strip()]
 
 # Application definition
 INSTALLED_APPS = [
@@ -74,6 +68,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'hotel_hms.middleware.MaintenanceModeMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',

@@ -11,19 +11,19 @@
     <!-- Cards de estatísticas -->
     <div class="row g-4 mb-4">
         <!-- Card de ocupação -->
-        <div class="col-md-4">
-            <div class="card stats-card h-100 border-start border-primary border-4">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="card-title mb-0 stats-title">Ocupação Atual</h5>
-                        <div class="stats-icon text-primary">
-                            <i class="fas fa-hotel"></i>
+                        <div class="col-6">
+                            {% if user.is_authenticated %}
+                                <a href="{% url 'finance:cash_overview' %}" class="btn btn-warning d-flex flex-column align-items-center p-3 h-100 w-100">
+                                    <i class="fas fa-file-invoice-dollar fa-2x mb-2"></i>
+                                    <span>Fluxo de Caixa</span>
+                                </a>
+                            {% else %}
+                                <a href="#" class="btn btn-warning d-flex flex-column align-items-center p-3 h-100 w-100" data-bs-toggle="modal" data-bs-target="#loginRequiredModal">
+                                    <i class="fas fa-file-invoice-dollar fa-2x mb-2"></i>
+                                    <span>Fluxo de Caixa</span>
+                                </a>
+                            {% endif %}
                         </div>
-                    </div>
-                    <h2 class="display-4 fw-bold stats-value" id="occupancyRate">{{ occupancy_rate }}%</h2>
-                    <div class="d-flex justify-content-between mt-3">
-                        <div class="text-start">
-                            <span class="d-block text-muted small">Ocupados</span>
                             <span class="fs-5 fw-semibold" id="occupiedRooms">{{ occupied_rooms }}</span>
                         </div>
                         <div class="text-end">
@@ -41,19 +41,19 @@
         </div>
         
         <!-- Card de check-ins -->
-        <div class="col-md-4">
-            <div class="card stats-card h-100 border-start border-success border-4">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="card-title mb-0 stats-title">Check-ins Hoje</h5>
-                        <div class="stats-icon text-success">
-                            <i class="fas fa-sign-in-alt"></i>
+                        <div class="col-6">
+                            {% if user.is_authenticated %}
+                                <a href="{% url 'reports:financial_report' %}" class="btn btn-warning d-flex flex-column align-items-center p-3 h-100 w-100">
+                                    <i class="fas fa-file-invoice-dollar fa-2x mb-2"></i>
+                                    <span>Relatório Financeiro</span>
+                                </a>
+                            {% else %}
+                                <a href="#" class="btn btn-warning d-flex flex-column align-items-center p-3 h-100 w-100" data-bs-toggle="modal" data-bs-target="#loginRequiredModal">
+                                    <i class="fas fa-file-invoice-dollar fa-2x mb-2"></i>
+                                    <span>Relatório Financeiro</span>
+                                </a>
+                            {% endif %}
                         </div>
-                    </div>
-                    <h2 class="display-4 fw-bold stats-value" id="todayCheckins">{{ todays_checkins }}</h2>
-                    <div class="d-flex justify-content-between mt-3">
-                        <div class="text-start">
-                            <span class="d-block text-muted small">Realizados</span>
                             <span class="fs-5 fw-semibold" id="completedCheckins">{{ completed_checkins }}</span>
                         </div>
                         <div class="text-end">
@@ -71,19 +71,19 @@
         </div>
         
         <!-- Card de check-outs -->
-        <div class="col-md-4">
-            <div class="card stats-card h-100 border-start border-danger border-4">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="card-title mb-0 stats-title">Check-outs Hoje</h5>
-                        <div class="stats-icon text-danger">
-                            <i class="fas fa-sign-out-alt"></i>
+                        <div class="col-6">
+                            {% if user.is_authenticated %}
+                                <a href="{% url 'reports:financial_report' %}" class="btn btn-warning d-flex flex-column align-items-center p-3 h-100 w-100">
+                                    <i class="fas fa-file-invoice-dollar fa-2x mb-2"></i>
+                                    <span>Relatório Financeiro</span>
+                                </a>
+                            {% else %}
+                                <a href="#" class="btn btn-warning d-flex flex-column align-items-center p-3 h-100 w-100" data-bs-toggle="modal" data-bs-target="#loginRequiredModal">
+                                    <i class="fas fa-file-invoice-dollar fa-2x mb-2"></i>
+                                    <span>Relatório Financeiro</span>
+                                </a>
+                            {% endif %}
                         </div>
-                    </div>
-                    <h2 class="display-4 fw-bold stats-value" id="todayCheckouts">{{ todays_checkouts }}</h2>
-                    <div class="d-flex justify-content-between mt-3">
-                        <div class="text-start">
-                            <span class="d-block text-muted small">Realizados</span>
                             <span class="fs-5 fw-semibold" id="completedCheckouts">{{ completed_checkouts }}</span>
                         </div>
                         <div class="text-end">
@@ -103,19 +103,19 @@
     
     <div class="row g-4">
         <!-- Calendário Mensal de Reservas -->
-        <div class="col-lg-8">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-calendar me-2"></i>Calendário de Reservas
-                    </h5>
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-sm btn-outline-primary" id="prevMonth">
-                            <i class="fas fa-chevron-left"></i>
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-primary" id="currentMonth">Hoje</button>
-                        <button type="button" class="btn btn-sm btn-outline-primary" id="nextMonth">
-                            <i class="fas fa-chevron-right"></i>
+                        <div class="col-6">
+                            {% if user.is_authenticated %}
+                                <a href="{% url 'reports:financial_consolidated' %}" class="btn btn-warning d-flex flex-column align-items-center p-3 h-100 w-100">
+                                    <i class="fas fa-file-invoice-dollar fa-2x mb-2"></i>
+                                    <span>Financeiro</span>
+                                </a>
+                            {% else %}
+                                <a href="#" class="btn btn-warning d-flex flex-column align-items-center p-3 h-100 w-100" data-bs-toggle="modal" data-bs-target="#loginRequiredModal">
+                                    <i class="fas fa-file-invoice-dollar fa-2x mb-2"></i>
+                                    <span>Financeiro</span>
+                                </a>
+                            {% endif %}
+                        </div>
                         </button>
                     </div>
                 </div>
@@ -162,19 +162,19 @@
         </div>
         
         <!-- Ações rápidas -->
-        <div class="col-lg-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-bolt me-2"></i>Ações Rápidas
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row g-3">
                         <div class="col-6">
-                            <a href="#" class="btn btn-primary d-flex flex-column align-items-center p-3 h-100 w-100" data-bs-toggle="modal" data-bs-target="#newReservationModal">
-                                <i class="fas fa-calendar-plus fa-2x mb-2"></i>
-                                <span>Nova Reserva</span>
+                            {% if user.is_authenticated %}
+                                <a href="{% url 'reports:financial_consolidated' %}" class="btn btn-warning d-flex flex-column align-items-center p-3 h-100 w-100">
+                                    <i class="fas fa-file-invoice-dollar fa-2x mb-2"></i>
+                                    <span>Financeiro</span>
+                                </a>
+                            {% else %}
+                                <a href="#" class="btn btn-warning d-flex flex-column align-items-center p-3 h-100 w-100" data-bs-toggle="modal" data-bs-target="#loginRequiredModal">
+                                    <i class="fas fa-file-invoice-dollar fa-2x mb-2"></i>
+                                    <span>Financeiro</span>
+                                </a>
+                            {% endif %}
+                        </div>
                             </a>
                         </div>
                         <div class="col-6">
@@ -209,14 +209,14 @@
                         </div>
                         <div class="col-6">
                             {% if user.is_authenticated %}
-                                <a href="{% url 'finance:all_invoices' %}" class="btn btn-warning d-flex flex-column align-items-center p-3 h-100 w-100">
+                                <a href="{% url 'reports:financial_consolidated' %}" class="btn btn-warning d-flex flex-column align-items-center p-3 h-100 w-100">
                                     <i class="fas fa-file-invoice-dollar fa-2x mb-2"></i>
-                                    <span>Ver Todas as Faturas</span>
+                                    <span>Financeiro</span>
                                 </a>
                             {% else %}
                                 <a href="#" class="btn btn-warning d-flex flex-column align-items-center p-3 h-100 w-100" data-bs-toggle="modal" data-bs-target="#loginRequiredModal">
                                     <i class="fas fa-file-invoice-dollar fa-2x mb-2"></i>
-                                    <span>Ver Todas as Faturas</span>
+                                    <span>Financeiro</span>
                                 </a>
                             {% endif %}
                         </div>                        <div class="col-6">
@@ -339,13 +339,13 @@
                 <div class="text-center py-4">
                     <i class="fas fa-lock fa-3x text-warning mb-3"></i>
                     <h4>Acesso Restrito</h4>
-                    <p class="mt-3">Para acessar a página de faturas, você precisa estar autenticado no sistema.</p>
-                    <p>Esta é uma área restrita que contém informações financeiras sensíveis.</p>
+                    <p class="mt-3">Para acessar os dados financeiros, faça login no sistema.</p>
+                    <p>Esta é uma área restrita que contém informações sensíveis.</p>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                <a href="/accounts/login/?next={% url 'finance:list_invoices' %}" class="btn btn-primary">
+                <a href="/accounts/login/?next={% url 'finance:cash_overview' %}" class="btn btn-primary">
                     <i class="fas fa-sign-in-alt me-1"></i> Fazer Login
                 </a>
             </div>
@@ -433,8 +433,8 @@
                             <strong>Quarto:</strong> {{ reservation.room.number }}<br>
                             <strong>Hóspede:</strong> {{ reservation.guest_name }}
                         </div>
-                        <a href="{% url 'finance:reservation_invoices' reservation.id %}" class="btn btn-sm btn-warning">
-                            Ver Faturas
+                        <a href="{% url 'reports:financial_report' %}" class="btn btn-sm btn-warning">
+                            Ver Financeiro
                         </a>
                     </div>
                     {% empty %}

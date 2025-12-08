@@ -11,6 +11,7 @@ class Room(models.Model):
 
     number = models.CharField(max_length=10, unique=True)
     room_type = models.CharField(max_length=10, choices=ROOM_TYPES)
+    price_per_night = models.DecimalField(max_digits=10, decimal_places=2, default=150.00, verbose_name="Diária Padrão")
     status = models.CharField(max_length=20, default='clean')
     description = models.TextField(blank=True, null=True)
 

@@ -1,14 +1,12 @@
-from django.shortcuts import render, get_object_or_404
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
-from django.db import transaction
-from django.utils import timezone
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from django.views.decorators.http import require_POST
 
-from apps.reservations.models import Reservation
-from apps.finance.models import Invoice
-from apps.rooms.models import Room
 from apps.checkin_checkout.models import CheckIn, CheckOut
+from apps.reservations.models import Reservation, ReservationGuest, Room
 
 @login_required
 @require_POST
@@ -19,48 +17,35 @@ def perform_checkin(request, reservation_id):
     try:
         with transaction.atomic():
             reservation = get_object_or_404(Reservation, id=reservation_id)
-            
-            # Verificar se a reserva já tem check-in
-            if reservation.checked_in:
+
+            if reservation.ocupando:
                 return JsonResponse({
                     'success': False,
-                    'message': 'Esta reserva já possui check-in'
+                    'message': 'Esta reserva já está ativa.'
                 }, status=400)
-            
-            # Verificar se a reserva está dentro da data prevista
-            today = timezone.now().date()
-            if reservation.check_in_date > today:
-                return JsonResponse({
-                    'success': False, 
-                    'message': 'Não é possível fazer check-in antes da data de início da reserva'
-                }, status=400)
-            
-            # Verificar se o quarto está disponível
-            room = reservation.room
-            if room.status != 'available' and room.status != 'reserved' and room.status != 'clean':
+
+            if reservation.room.status != Room.Status.DISPONIVEL:
                 return JsonResponse({
                     'success': False,
-                    'message': f'O quarto {room.number} não está disponível para check-in. Status atual: {room.status}'
+                    'message': f"O quarto {reservation.room.numero} não está disponível."
                 }, status=400)
-            
-            # Criar o objeto CheckIn
-            checkin = CheckIn(
+
+            checkin, created = CheckIn.objects.get_or_create(
                 reservation=reservation,
-                document_scanned=True,  # Valor padrão, ajuste conforme necessário
-                completed=True
+                defaults={'document_scanned': True, 'completed': True}
             )
-            
-            # O salvamento do CheckIn irá atualizar automaticamente a reserva e o status dela
-            checkin.save()
-            
-            # Atualizar o status do quarto
-            room.status = 'occupied'
-            room.save()
-            
+
+            if not created:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Já existe um registro de check-in para esta reserva.'
+                }, status=400)
+
             return JsonResponse({
                 'success': True,
-                'message': 'Check-in realizado com sucesso',
-                'check_in_time': reservation.check_in_time.strftime('%Y-%m-%d %H:%M:%S') if reservation.check_in_time else None
+                'message': 'Check-in registrado com sucesso.',
+                'room': reservation.room.numero,
+                'started_at': checkin.started_at.isoformat()
             })
     
     except Exception as e:
@@ -78,58 +63,37 @@ def perform_checkout(request, reservation_id):
     try:
         with transaction.atomic():
             reservation = get_object_or_404(Reservation, id=reservation_id)
-            
-            # Verificar se a reserva tem check-in
-            if not reservation.checked_in:
+
+            if not reservation.ocupando:
                 return JsonResponse({
                     'success': False,
-                    'message': 'Esta reserva não possui check-in'
+                    'message': 'Esta reserva já está encerrada.'
                 }, status=400)
-                
-            # Verificar se a reserva já tem check-out
-            if reservation.checked_out:
+
+            has_pending = reservation.hospedes.filter(pago=False).exists()
+            if has_pending:
                 return JsonResponse({
                     'success': False,
-                    'message': 'Esta reserva já possui check-out'
+                    'message': 'Existem hóspedes com valores pendentes.'
                 }, status=400)
-            
-            # Verificar se todas as faturas estão pagas
-            unpaid_invoices = Invoice.objects.filter(reservation=reservation, paid=False).count()
-            if unpaid_invoices > 0:
-                return JsonResponse({
-                    'success': False,
-                    'message': f'Existem {unpaid_invoices} faturas pendentes. Todas as faturas devem ser pagas antes do check-out'
-                }, status=400)
-            
-            # Buscar o check-in relacionado
-            try:
-                checkin = CheckIn.objects.get(reservation=reservation)
-            except CheckIn.DoesNotExist:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'O registro de check-in não foi encontrado'
-                }, status=400)
-                
-            # Criar o objeto CheckOut
-            checkout = CheckOut(
+
+            checkin = CheckIn.objects.filter(reservation=reservation).first()
+
+            checkout, created = CheckOut.objects.get_or_create(
                 reservation=reservation,
-                check_in=checkin,
-                has_pending_payments=False,  # Já verificamos acima que não há faturas pendentes
-                completed=True
+                defaults={'check_in': checkin, 'has_pending_payments': False, 'completed': True}
             )
-            
-            # O salvamento do CheckOut irá atualizar automaticamente a reserva e o status dela
-            checkout.save()
-            
-            # Atualizar o status do quarto
-            room = reservation.room
-            room.status = 'needs_cleaning'
-            room.save()
-            
+
+            if not created:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Já existe um check-out para esta reserva.'
+                }, status=400)
+
             return JsonResponse({
                 'success': True,
-                'message': 'Check-out realizado com sucesso',
-                'check_out_time': reservation.check_out_time.strftime('%Y-%m-%d %H:%M:%S') if reservation.check_out_time else None
+                'message': 'Check-out registrado com sucesso.',
+                'finished_at': checkout.finished_at.isoformat()
             })
     
     except Exception as e:
@@ -143,16 +107,15 @@ def list_current_guests(request):
     """
     Lista todas as reservas com check-in mas sem check-out
     """
-    current_guests = Reservation.objects.filter(checked_in=True, checked_out=False)
-    
+    current_guests = Reservation.objects.ativas().select_related('room').prefetch_related('hospedes')
+
     guests_data = [{
         'id': reservation.id,
-        'guest_name': reservation.guest_name,
-        'room_number': reservation.room.number,
-        'check_in_time': reservation.check_in_time.strftime('%Y-%m-%d %H:%M:%S') if reservation.check_in_time else None,
-        'expected_checkout': reservation.check_out_date.strftime('%Y-%m-%d')
+        'room_number': reservation.room.numero,
+        'guests': [guest.nome for guest in reservation.hospedes.all()],
+        'check_in_time': reservation.data_entrada.strftime('%Y-%m-%d %H:%M:%S')
     } for reservation in current_guests]
-    
+
     return JsonResponse({'current_guests': guests_data})
 
 @login_required
@@ -160,32 +123,29 @@ def list_expected_arrivals(request):
     """
     Lista todas as reservas que têm check-in esperado para hoje
     """
-    today = timezone.now().date()
-    expected_arrivals = Reservation.objects.filter(check_in_date=today, checked_in=False)
-    
+    available_rooms = Room.objects.filter(status=Room.Status.DISPONIVEL).order_by('numero')
+
     arrivals_data = [{
-        'id': reservation.id,
-        'guest_name': reservation.guest_name,
-        'room_number': reservation.room.number,
-        'expected_checkin': reservation.check_in_date.strftime('%Y-%m-%d')
-    } for reservation in expected_arrivals]
-    
-    return JsonResponse({'expected_arrivals': arrivals_data})
+        'room_id': room.id,
+        'room_number': room.numero
+    } for room in available_rooms]
+
+    return JsonResponse({'available_rooms': arrivals_data})
 
 @login_required
 def list_expected_departures(request):
     """
     Lista todas as reservas que têm check-out esperado para hoje ou datas anteriores (atrasadas)
     """
-    today = timezone.now().date()
-    expected_departures = Reservation.objects.filter(check_out_date__lte=today, checked_in=True, checked_out=False)
-    
+    today = timezone.localdate()
+    active_reservations = Reservation.objects.ativas().select_related('room')
+    departures = active_reservations.filter(data_entrada__date__lt=today)
+
     departures_data = [{
         'id': reservation.id,
-        'guest_name': reservation.guest_name,
-        'room_number': reservation.room.number,
-        'check_in_time': reservation.check_in_time.strftime('%Y-%m-%d %H:%M:%S') if reservation.check_in_time else None,
-        'expected_checkout': reservation.check_out_date.strftime('%Y-%m-%d')
-    } for reservation in expected_departures]
-    
+        'room_number': reservation.room.numero,
+        'guests': [guest.nome for guest in reservation.hospedes.all()],
+        'started_at': reservation.data_entrada.strftime('%Y-%m-%d %H:%M:%S')
+    } for reservation in departures]
+
     return JsonResponse({'expected_departures': departures_data})

@@ -7,7 +7,7 @@ from apps.checkin_checkout.models import CheckIn, CheckOut
 import json
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_protect
-from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.decorators import user_passes_test, login_required
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -49,7 +49,7 @@ class AvailableRoomsSerializer(serializers.Serializer):
     check_out = serializers.DateField(required=False)
 
 class AvailableRoomsView(APIView):
-    permission_classes = [AllowAny]  # Modificado para permitir acesso sem autenticação
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         serializer = AvailableRoomsSerializer(data=request.GET)
@@ -80,6 +80,7 @@ class AvailableRoomsView(APIView):
 
 @require_http_methods(["POST"])
 @csrf_protect
+@login_required
 def reservation_create(request):
     """API para criar uma nova reserva"""
     try:
@@ -197,9 +198,6 @@ class RoomListView(ListCreateAPIView):
     serializer_class = RoomSerializer
     
     def get_permissions(self):
-        # Permitir leitura para todos, mas exigir autenticação para criação
-        if self.request.method == 'GET':
-            return [AllowAny()]
         return [IsAuthenticated()]
 
 class RoomDetailView(RetrieveUpdateAPIView):
@@ -208,14 +206,11 @@ class RoomDetailView(RetrieveUpdateAPIView):
     serializer_class = RoomSerializer
     
     def get_permissions(self):
-        # Permitir leitura para todos, mas exigir autenticação para atualização
-        if self.request.method == 'GET':
-            return [AllowAny()]
         return [IsAuthenticated()]
 
 class RoomStatusUpdateView(APIView):
     """API para atualizar o status de um quarto"""
-    permission_classes = [AllowAny]  # Permitir acesso para operações de status
+    permission_classes = [IsAuthenticated]
     
     def post(self, request, pk):
         try:
@@ -257,7 +252,7 @@ class RoomStatusUpdateView(APIView):
 class RoomMaintenanceHistoryView(ListAPIView):
     """API para listar o histórico de manutenção de um quarto"""
     serializer_class = MaintenanceRecordSerializer
-    permission_classes = [AllowAny]  # Permitir acesso ao histórico de manutenção
+    permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
         room_id = self.kwargs.get('pk')
@@ -265,7 +260,7 @@ class RoomMaintenanceHistoryView(ListAPIView):
 
 class ReservationCalendarView(APIView):
     """API para fornecer dados do calendário de reservas do mês"""
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     
     def get(self, request):
         # Obter o ano e mês da consulta

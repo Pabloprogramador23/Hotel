@@ -1,66 +1,99 @@
 from django.db import models
-from django.core.exceptions import ValidationError
-from apps.settings_manager.models import SystemSetting
+from django.utils import timezone
 
-# Create your models here.
+
+class Room(models.Model):
+    class Status(models.TextChoices):
+        DISPONIVEL = 'disponivel', 'Disponivel'
+        OCUPADO = 'ocupado', 'Ocupado'
+
+    numero = models.CharField(max_length=10, unique=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.DISPONIVEL,
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['numero']
+
+    def __str__(self) -> str:
+        return f"Quarto {self.numero}"
+
+    def ocupar(self):
+        self.status = Room.Status.OCUPADO
+        self.save(update_fields=['status', 'atualizado_em'])
+
+    def liberar(self):
+        self.status = Room.Status.DISPONIVEL
+        self.save(update_fields=['status', 'atualizado_em'])
+
+
+class ReservationQuerySet(models.QuerySet):
+    def ativas(self):
+        return self.filter(ativa=True, data_saida__isnull=True)
+
 
 class Reservation(models.Model):
-    STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('confirmed', 'Confirmed'),
-        ('cancelled', 'Cancelled'),
-        ('checked_in', 'Checked In'),   # Status adicionado
-        ('checked_out', 'Checked Out'), # Status adicionado
-    ]
+    room = models.ForeignKey(Room, related_name='reservas', on_delete=models.CASCADE)
+    data_entrada = models.DateTimeField(auto_now_add=True)
+    data_saida = models.DateTimeField(blank=True, null=True)
+    ativa = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
 
-    guest_name = models.CharField(max_length=255)
-    guest_email = models.EmailField(blank=True, null=True)
-    room = models.ForeignKey('rooms.Room', on_delete=models.CASCADE)
-    check_in_date = models.DateField()
-    check_out_date = models.DateField()
-    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default='pending')  # Aumentei max_length para acomodar 'checked_out'
-    notes = models.TextField(blank=True, null=True)
-    
-    # Campos adicionados para rastrear check-in/check-out
-    checked_in = models.BooleanField(default=False)
-    checked_out = models.BooleanField(default=False)
-    check_in_time = models.DateTimeField(null=True, blank=True)
-    check_out_time = models.DateTimeField(null=True, blank=True)
+    objects = ReservationQuerySet.as_manager()
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    class Meta:
+        ordering = ['-data_entrada']
 
-    def __str__(self):
-        return f"Reservation {self.id} - {self.guest_name}"
-    
-    def clean(self):
-        # Validar que a data de check-out não seja anterior à data de check-in
-        if self.check_out_date and self.check_in_date and self.check_out_date < self.check_in_date:
-            raise ValidationError("Check-out date cannot be earlier than check-in date")
-            
+    def __str__(self) -> str:
+        return f"Reserva #{self.pk} - Quarto {self.room.numero}"
+
     def save(self, *args, **kwargs):
-        # Executar validações
-        self.clean()
-        
-        # Verificar se o overbooking está permitido nas configurações
-        allow_overbooking = False
-        try:
-            setting = SystemSetting.objects.get(key="allow_overbooking")
-            allow_overbooking = setting.value.lower() == 'true'
-        except SystemSetting.DoesNotExist:
-            # Se a configuração não existir, assume-se que não é permitido
-            pass
-        
-        # Se o overbooking não estiver permitido, verificar sobreposições
-        if not allow_overbooking and self.status not in ['cancelled', 'checked_out']:
-            overlapping_reservations = Reservation.objects.filter(
-                room=self.room,
-                check_in_date__lt=self.check_out_date,
-                check_out_date__gt=self.check_in_date,
-                status__in=['pending', 'confirmed', 'checked_in']  # Considerar reservas ativas
-            ).exclude(pk=self.pk)
-
-            if overlapping_reservations.exists():
-                raise ValueError("Overbooking detected for room {}".format(self.room.number))
-
         super().save(*args, **kwargs)
+        if self.ocupando:
+            self.room.ocupar()
+
+    def encerrar(self, quando=None):
+        quando = quando or timezone.now()
+        self.data_saida = quando
+        self.ativa = False
+        self.save(update_fields=['data_saida', 'ativa', 'atualizado_em'])
+        self.room.liberar()
+
+    @property
+    def ocupando(self) -> bool:
+        return self.ativa and self.data_saida is None
+
+
+class ReservationGuest(models.Model):
+    class MetodoPagamento(models.TextChoices):
+        PIX = 'PIX', 'Pix'
+        DINHEIRO = 'DINHEIRO', 'Dinheiro'
+        PENDENTE = 'PENDENTE', 'Pendente'
+
+    reserva = models.ForeignKey(Reservation, related_name='hospedes', on_delete=models.CASCADE)
+    nome = models.CharField(max_length=255)
+    valor_devido = models.DecimalField(max_digits=10, decimal_places=2)
+    pago = models.BooleanField(default=False)
+    metodo_pagamento = models.CharField(
+        max_length=20,
+        choices=MetodoPagamento.choices,
+        default=MetodoPagamento.PENDENTE,
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-criado_em']
+
+    def __str__(self) -> str:
+        return f"{self.nome} - Reserva {self.reserva_id}"
+
+    def registrar_pagamento(self, metodo: str):
+        self.metodo_pagamento = metodo
+        self.pago = metodo != ReservationGuest.MetodoPagamento.PENDENTE
+        self.save(update_fields=['metodo_pagamento', 'pago', 'atualizado_em'])

@@ -1,7 +1,9 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404, HttpResponse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
+from django.views.decorators.http import require_POST
+from decimal import Decimal
 from .models import SystemSetting
 
 @login_required
@@ -117,3 +119,24 @@ def settings_delete(request, pk):
         'setting': setting,
         'title': 'Confirmar Exclusão'
     })
+
+from apps.rooms.models import Room
+
+@login_required
+def settings_pricing_modal(request):
+    rooms = Room.objects.all().order_by('number')
+    return render(request, 'settings_manager/partials/pricing_modal.html', {'rooms': rooms})
+
+@login_required
+@require_POST
+def update_room_price(request, room_id):
+    room = get_object_or_404(Room, id=room_id)
+    new_price = request.POST.get('price')
+    if new_price:
+        try:
+            room.price_per_night = Decimal(new_price)
+            room.save()
+            return HttpResponse('<i class="fas fa-check text-success"></i>', status=200)
+        except:
+            return HttpResponse('<i class="fas fa-times text-danger"></i>', status=400)
+    return HttpResponse(status=200)

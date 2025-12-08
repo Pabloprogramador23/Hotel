@@ -1,0 +1,110 @@
+<div class="modal fade" id="roomDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl"> <!-- EXTRA LARGE MODAL -->
+        <div class="modal-content border-0 shadow-lg overflow-hidden" style="border-radius: 1.5rem;">
+            <div class="row g-0">
+                <!-- LEFTSIDE: STATUS & SUMMARY (Dark Theme) -->
+                <div class="col-lg-4 bg-dark text-white p-5 d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-start mb-4">
+                            <div>
+                                <h6 class="text-white-50 text-uppercase fw-bold letter-spacing-1 mb-1">Room / Quarto
+                                </h6>
+                                <h1 class="display-2 fw-bold mb-0">{{ reservation.room.number }}</h1>
+                            </div>
+                            <span
+                                class="badge bg-success bg-opacity-25 text-success border border-success fw-bold px-3 py-2 rounded-pill">
+                                {{ reservation.get_status_display }}
+                            </span>
+                        </div>
+
+                        <div class="mb-5">
+                            <h6 class="text-white-50 text-uppercase fw-bold small mb-2">Hóspede Principal</h6>
+                            <h3 class="fw-bold">{{ reservation.guest_name }}</h3>
+                            <div class="d-flex align-items-center gap-2 text-white-50 mt-2">
+                                <i class="fas fa-clock"></i>
+                                <span>Check-in: {{ reservation.check_in_date|date:'d/m H:i' }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="d-flex justify-content-between align-items-end mb-2">
+                            <span class="text-white-50 fw-bold">TOTAL GERAL</span>
+                            <span class="display-6 fw-bold">R$ {{ total_due|floatformat:2 }}</span>
+                        </div>
+                        <div class="progress bg-white bg-opacity-10" style="height: 6px;">
+                            <!-- Logic: Calculate percent paid in view or template? Simplified here -->
+                            <div class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+                        </div>
+
+                        <div class="d-grid mt-4">
+                            <button type="button" hx-post="{% url 'checkout_reservation' reservation.id %}"
+                                hx-confirm="Confirma o Checkout e liberação do quarto?"
+                                class="btn btn-light btn-lg rounded-pill fw-bold py-3 hover-scale">
+                                <i class="fas fa-sign-out-alt me-2 text-dark"></i> FINALIZAR CHECKOUT
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHTSIDE: TRANSACTIONS & ACTIONS (Light Theme) -->
+                <div class="col-lg-8 bg-light p-5">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="fw-bold text-dark mb-0">Comandas / Contas</h4>
+                        <button class="btn btn-outline-dark rounded-circle p-2" data-bs-dismiss="modal">
+                            <i class="fas fa-times fa-lg"></i>
+                        </button>
+                    </div>
+
+                    <!-- ADD GUEST FORM (Always Visible) -->
+                    <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">
+                        <div class="card-body bg-white p-4">
+                            <h6 class="fw-bold text-muted text-uppercase small mb-3"><i
+                                    class="fas fa-plus-circle me-2"></i>Adicionar Item / Hóspede</h6>
+                            <form hx-post="{% url 'add_guest' reservation.id %}" hx-target="#transactionList"
+                                hx-swap="beforeend" onsubmit="this.reset()">
+                                {% csrf_token %}
+                                <div class="row g-2">
+                                    <div class="col-md-5">
+                                        <input type="text" name="guest_name"
+                                            class="form-control form-control-lg bg-light border-0 fw-bold"
+                                            placeholder="Descrição / Nome" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="input-group input-group-lg">
+                                            <span class="input-group-text bg-light border-0 text-muted">R$</span>
+                                            <input type="number" name="guest_amount"
+                                                class="form-control bg-light border-0 fw-bold" placeholder="0.00"
+                                                step="0.01" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <button type="submit"
+                                            class="btn btn-primary btn-lg w-100 rounded-3 fw-bold shadow-sm">
+                                            Lançar
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- TRANSACTION LIST -->
+                    <div id="transactionList" class="d-flex flex-column gap-3"
+                        style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
+                        {% for guest in reservation.guests.all %}
+                        {% include 'reservations/partials/guest_row_redesigned.html' %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .hover-scale:hover {
+        transform: scale(1.02);
+        transition: transform 0.2s;
+    }
+</style>

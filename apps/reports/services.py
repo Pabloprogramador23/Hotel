@@ -1,127 +1,117 @@
 from typing import Tuple, List, Dict, Any
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
+
+from django.db import connection
 from django.db.models import Q, Sum
 from django.db.models.functions import TruncDate
-from django.db import connection
-from apps.finance.models import Invoice, Expense, ExtraIncome
+
+from apps.finance.models import Expense, ExtraIncome, LedgerAdjustment
+from apps.reservations.models import ReservationGuest
+
+
+def _normalize_decimal(value) -> Decimal:
+    if value is None:
+        return Decimal('0')
+    if isinstance(value, Decimal):
+        return value
+    return Decimal(str(value))
+
+
+def _date_key(target_date) -> str:
+    return target_date.strftime('%Y-%m-%d')
+
 
 def calculate_revenue_data(start_date: date, end_date: date) -> Tuple[List[Dict[str, Any]], float, float, float]:
-    """
-    Calcula dados de receita agregada para o período informado.
-
-    Args:
-        start_date (date): Data inicial do período.
-        end_date (date): Data final do período.
-
-    Returns:
-        Tuple[List[Dict[str, Any]], float, float, float]:
-            - Lista de dicionários com dados agregados por dia.
-            - Soma total de receita no período.
-            - Soma total paga no período.
-            - Soma total pendente no período.
-    """
-    query = Invoice.objects
+    query = ReservationGuest.objects.select_related('reserva')
     if start_date == end_date:
-        query = query.filter(issued_at__date=start_date)
+        query = query.filter(criado_em__date=start_date)
     else:
-        query = query.filter(issued_at__date__gte=start_date, issued_at__date__lte=end_date)
-    
-    # Verificar se estamos usando SQLite
+        query = query.filter(criado_em__date__gte=start_date, criado_em__date__lte=end_date)
+
     is_sqlite = connection.vendor == 'sqlite'
-    
+    revenue_by_date: Dict[str, Dict[str, Any]] = {}
+
     if is_sqlite:
-        # Abordagem compatível com SQLite: buscar dados e agrupá-los em Python
-        invoices = list(query.values('issued_at', 'amount', 'paid'))
-        
-        # Agrupar por data e calcular totais manualmente
-        revenue_by_date = {}
-        for invoice in invoices:
-            date_value = invoice['issued_at'].date()  # Extrair apenas a data
-            date_str = date_value.strftime('%Y-%m-%d')
-            
-            if date_str not in revenue_by_date:
-                revenue_by_date[date_str] = {
-                    'issued_at__date': date_value,
-                    'date': date_value,
-                    'total_amount': 0,
-                    'paid_amount': 0,
-                    'pending_amount': 0
-                }
-            
-            # Somar valores
-            amount = invoice['amount']
-            revenue_by_date[date_str]['total_amount'] += amount
-            
-            if invoice['paid']:
-                revenue_by_date[date_str]['paid_amount'] += amount
+        charges = list(query.values('criado_em', 'valor_devido', 'pago'))
+        for charge in charges:
+            date_value = charge['criado_em'].date()
+            key = _date_key(date_value)
+            revenue_by_date.setdefault(key, {
+                'date': date_value,
+                'total_amount': Decimal('0'),
+                'paid_amount': Decimal('0'),
+                'pending_amount': Decimal('0'),
+            })
+            amount = _normalize_decimal(charge['valor_devido'])
+            revenue_by_date[key]['total_amount'] += amount
+            if charge['pago']:
+                revenue_by_date[key]['paid_amount'] += amount
             else:
-                revenue_by_date[date_str]['pending_amount'] += amount
-        
-        # Converter para lista
-        revenue_data = list(revenue_by_date.values())
-        revenue_data.sort(key=lambda x: x['date'])
+                revenue_by_date[key]['pending_amount'] += amount
     else:
-        # Para outros bancos de dados, usar a consulta original
-        revenue_data = list(
-            query
-            .values('issued_at__date')
-            .annotate(                date=TruncDate('issued_at'),
-                total_amount=Sum('amount'),
-                paid_amount=Sum('amount', filter=Q(paid=True)),
-                pending_amount=Sum('amount', filter=Q(paid=False))
-            )
-            .order_by('issued_at__date')
-        )
-    
-    total_revenue = sum(day['total_amount'] or 0 for day in revenue_data)
-    total_paid = sum(day['paid_amount'] or 0 for day in revenue_data)
-    total_pending = sum(day['pending_amount'] or 0 for day in revenue_data)
-    
-    # Adicionar receitas avulsas - sempre são consideradas pagas
+        aggregated = query.annotate(date=TruncDate('criado_em')).values('date').annotate(
+            total_amount=Sum('valor_devido'),
+            paid_amount=Sum('valor_devido', filter=Q(pago=True)),
+            pending_amount=Sum('valor_devido', filter=Q(pago=False)),
+        ).order_by('date')
+
+        for row in aggregated:
+            date_value = row['date']
+            key = _date_key(date_value)
+            revenue_by_date[key] = {
+                'date': date_value,
+                'total_amount': _normalize_decimal(row['total_amount']),
+                'paid_amount': _normalize_decimal(row['paid_amount']),
+                'pending_amount': _normalize_decimal(row['pending_amount']),
+            }
+
     extra_income_query = ExtraIncome.objects
     if start_date == end_date:
         extra_income_query = extra_income_query.filter(received_date=start_date)
     else:
         extra_income_query = extra_income_query.filter(received_date__gte=start_date, received_date__lte=end_date)
-    
-    # Agrupar receitas avulsas por data
-    if is_sqlite:
-        extra_incomes = list(extra_income_query.values('received_date', 'amount'))
-        
-        # Incorporar receitas avulsas nos dados de receita
-        for income in extra_incomes:
-            date_value = income['received_date']
-            date_str = date_value.strftime('%Y-%m-%d')
-            
-            amount = income['amount']
-            
-            if date_str in revenue_by_date:
-                # Adicionar a receitas existentes
-                revenue_by_date[date_str]['total_amount'] += amount
-                revenue_by_date[date_str]['paid_amount'] += amount  # Receitas avulsas são sempre pagas
-            else:
-                # Criar nova entrada para esta data
-                revenue_by_date[date_str] = {
-                    'issued_at__date': date_value,
-                    'date': date_value,
-                    'total_amount': amount,
-                    'paid_amount': amount,
-                    'pending_amount': 0
-                }
-        
-        # Refazer a lista ordenada
-        revenue_data = list(revenue_by_date.values())
-        revenue_data.sort(key=lambda x: x['date'])
-    
-    # Recalcular totais após incluir receitas avulsas
-    total_extra_income = extra_income_query.aggregate(total=Sum('amount'))['total'] or 0
-    
-    # Adicionar ao total
-    total_revenue += total_extra_income
-    total_paid += total_extra_income  # Receitas avulsas são sempre consideradas pagas
-    
-    return revenue_data, total_revenue, total_paid, total_pending
+
+    for income in extra_income_query.values('received_date', 'amount'):
+        date_value = income['received_date']
+        key = _date_key(date_value)
+        revenue_by_date.setdefault(key, {
+            'date': date_value,
+            'total_amount': Decimal('0'),
+            'paid_amount': Decimal('0'),
+            'pending_amount': Decimal('0'),
+        })
+        amount = _normalize_decimal(income['amount'])
+        revenue_by_date[key]['total_amount'] += amount
+        revenue_by_date[key]['paid_amount'] += amount
+
+    credit_adjustments = LedgerAdjustment.objects.filter(tipo=LedgerAdjustment.Tipo.CREDITO)
+    if start_date == end_date:
+        credit_adjustments = credit_adjustments.filter(criado_em__date=start_date)
+    else:
+        credit_adjustments = credit_adjustments.filter(criado_em__date__gte=start_date, criado_em__date__lte=end_date)
+
+    for ajuste in credit_adjustments.values('criado_em', 'valor'):
+        date_value = ajuste['criado_em'].date()
+        key = _date_key(date_value)
+        revenue_by_date.setdefault(key, {
+            'date': date_value,
+            'total_amount': Decimal('0'),
+            'paid_amount': Decimal('0'),
+            'pending_amount': Decimal('0'),
+        })
+        valor = _normalize_decimal(ajuste['valor'])
+        revenue_by_date[key]['total_amount'] += valor
+        revenue_by_date[key]['paid_amount'] += valor
+
+    revenue_data = [value for _, value in sorted(revenue_by_date.items())]
+
+    total_revenue = sum(item['total_amount'] for item in revenue_data)
+    total_paid = sum(item['paid_amount'] for item in revenue_data)
+    total_pending = sum(item['pending_amount'] for item in revenue_data)
+
+    return revenue_data, float(total_revenue), float(total_paid), float(total_pending)
+
 
 def calculate_expense_data(start_date: date, end_date: date) -> Tuple[List[Dict[str, Any]], float, Dict[str, float]]:
     """
@@ -142,60 +132,61 @@ def calculate_expense_data(start_date: date, end_date: date) -> Tuple[List[Dict[
         query = query.filter(payment_date=start_date)
     else:
         query = query.filter(payment_date__gte=start_date, payment_date__lte=end_date)
-    
-    # Verificar se estamos usando SQLite
+
     is_sqlite = connection.vendor == 'sqlite'
-    
+    expense_by_date: Dict[str, Dict[str, Any]] = {}
+
     if is_sqlite:
-        # Abordagem compatível com SQLite: buscar os dados e agrupá-los em Python
         expenses = list(query.values('payment_date', 'amount'))
-        
-        # Agrupar por data e somar os valores manualmente
-        expense_by_date = {}
         for expense in expenses:
-            date_str = expense['payment_date'].strftime('%Y-%m-%d')
-            if date_str not in expense_by_date:
-                expense_by_date[date_str] = {
-                    'payment_date': expense['payment_date'], 
-                    'date': expense['payment_date'],
-                    'total_amount': 0
-                }
-            expense_by_date[date_str]['total_amount'] += expense['amount']
-        
-        # Converter para lista
-        expense_data = list(expense_by_date.values())
-        expense_data.sort(key=lambda x: x['payment_date'])
+            date_value = expense['payment_date']
+            key = _date_key(date_value)
+            expense_by_date.setdefault(key, {
+                'date': date_value,
+                'total_amount': Decimal('0'),
+            })
+            expense_by_date[key]['total_amount'] += _normalize_decimal(expense['amount'])
     else:
-        # Para outros bancos de dados, usar a consulta original
-        expense_data = list(
-            query
-            .values('payment_date')
-            .annotate(
-                date=TruncDate('payment_date'),
-                total_amount=Sum('amount')
-            )
-            .order_by('payment_date')
-        )
-    
-    # Garantir que todos os valores de total_amount sejam válidos
-    for item in expense_data:
-        if item['total_amount'] is None:
-            item['total_amount'] = 0
-    
-    # Total de despesas no período (com verificação de valores None)
-    total_expense = sum(float(day['total_amount']) for day in expense_data)
-    
-    # Calcular total por categoria
+        aggregated = query.annotate(date=TruncDate('payment_date')).values('date').annotate(
+            total_amount=Sum('amount')
+        ).order_by('date')
+        for row in aggregated:
+            date_value = row['date']
+            key = _date_key(date_value)
+            expense_by_date[key] = {
+                'date': date_value,
+                'total_amount': _normalize_decimal(row['total_amount']),
+            }
+
+    debit_adjustments = LedgerAdjustment.objects.filter(tipo=LedgerAdjustment.Tipo.DEBITO)
+    if start_date == end_date:
+        debit_adjustments = debit_adjustments.filter(criado_em__date=start_date)
+    else:
+        debit_adjustments = debit_adjustments.filter(criado_em__date__gte=start_date, criado_em__date__lte=end_date)
+
+    for ajuste in debit_adjustments.values('criado_em', 'valor'):
+        date_value = ajuste['criado_em'].date()
+        key = _date_key(date_value)
+        expense_by_date.setdefault(key, {
+            'date': date_value,
+            'total_amount': Decimal('0'),
+        })
+        expense_by_date[key]['total_amount'] += _normalize_decimal(ajuste['valor'])
+
+    expense_data = [value for _, value in sorted(expense_by_date.items())]
+
+    total_expense = sum(item['total_amount'] for item in expense_data)
+
     category_totals = {}
     for category_code, category_name in Expense.CATEGORY_CHOICES:
         category_amount = query.filter(category=category_code).aggregate(total=Sum('amount'))['total'] or 0
-        if category_amount > 0:
+        if category_amount:
             category_totals[category_code] = {
                 'name': category_name,
-                'amount': float(category_amount)
+                'amount': float(category_amount),
             }
-    
-    return expense_data, total_expense, category_totals
+
+    return expense_data, float(total_expense), category_totals
 
 def calculate_cash_flow_data(start_date: date, end_date: date) -> Dict[str, Any]:
     """
