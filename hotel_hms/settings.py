@@ -30,6 +30,10 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(','
 _csrf_env = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_env.split(',') if o.strip()]
 
+# Autenticação
+LOGIN_URL = '/admin/login/'
+LOGIN_REDIRECT_URL = '/'
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
