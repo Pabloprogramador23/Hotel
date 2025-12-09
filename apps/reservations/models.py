@@ -68,6 +68,22 @@ class Reservation(models.Model):
     def ocupando(self) -> bool:
         return self.ativa and self.data_saida is None
 
+    @property
+    def guest_name(self) -> str:
+        """Retorna o nome do primeiro hóspede ou string vazia."""
+        primeiro = self.hospedes.first()
+        return primeiro.nome if primeiro else ''
+
+    @property
+    def check_in_date(self):
+        """Alias para data_entrada (compatibilidade com templates)."""
+        return self.data_entrada
+
+    @property
+    def check_out_date(self):
+        """Alias para data_saida (compatibilidade com templates)."""
+        return self.data_saida
+
 
 class ReservationGuest(models.Model):
     class MetodoPagamento(models.TextChoices):

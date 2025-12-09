@@ -234,3 +234,29 @@ def add_guest(request: HttpRequest, reservation_id: int) -> HttpResponse:
     else:
         messages.success(request, 'Hóspede adicionado com sucesso.')
     return redirect('reservations:room_detail', room_id=reservation.room_id)
+
+
+@login_required
+@require_POST
+def checkout(request: HttpRequest, reservation_id: int) -> HttpResponse:
+    """Finaliza a estadia do hóspede (check-out)."""
+    reservation = get_object_or_404(
+        Reservation.objects.select_related('room'),
+        pk=reservation_id,
+        ativa=True,
+    )
+    
+    # Verifica se há pagamentos pendentes
+    pendentes = reservation.hospedes.filter(pago=False).count()
+    
+    if pendentes > 0:
+        messages.warning(
+            request, 
+            f'Atenção: Existem {pendentes} pagamento(s) pendente(s). Check-out realizado mesmo assim.'
+        )
+    
+    room_id = reservation.room_id
+    reservation.encerrar()
+    
+    messages.success(request, 'Check-out realizado com sucesso! Quarto liberado.')
+    return redirect('reservations:dashboard')

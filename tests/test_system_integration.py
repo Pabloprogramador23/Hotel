@@ -19,14 +19,14 @@ class TestFullGuestJourney:
         return Room.objects.create(numero="801")
 
     def test_complete_guest_journey(self, room):
+        # Criar reserva automaticamente ocupa o quarto
         reservation = Reservation.objects.create(room=room)
         assert reservation.room == room
         room.refresh_from_db()
         assert room.status == Room.Status.OCUPADO
+        assert reservation.ocupando is True
 
-        check_in = CheckIn.objects.create(reservation=reservation, document_scanned=True)
-        assert check_in.document_scanned is True
-
+        # Adicionar hóspedes
         ReservationGuest.objects.create(
             reserva=reservation,
             nome="Hóspede Pago",
@@ -42,11 +42,15 @@ class TestFullGuestJourney:
             metodo_pagamento=ReservationGuest.MetodoPagamento.PENDENTE,
         )
 
+        # Checkout deve falhar com pagamentos pendentes
         with pytest.raises(ValidationError):
-            CheckOut.objects.create(reservation=reservation, check_in=check_in)
+            CheckOut.objects.create(reservation=reservation)
 
+        # Registrar pagamento do hóspede pendente
         pending_guest.registrar_pagamento(ReservationGuest.MetodoPagamento.DINHEIRO)
-        checkout = CheckOut.objects.create(reservation=reservation, check_in=check_in)
+        
+        # Agora checkout pode ser criado
+        checkout = CheckOut.objects.create(reservation=reservation)
 
         reservation.refresh_from_db()
         room.refresh_from_db()
@@ -59,7 +63,14 @@ class TestFullGuestJourney:
 class TestReservationPaymentFlow:
     """Garante que a view de atualização de pagamento integra corretamente com o modelo."""
 
-    def test_update_guest_payment_toggle(self, client):
+    @pytest.fixture
+    def user(self, db):
+        from django.contrib.auth.models import User
+        return User.objects.create_user(username='testuser', password='testpass123')
+
+    def test_update_guest_payment_toggle(self, client, user):
+        client.login(username='testuser', password='testpass123')
+        
         room = Room.objects.create(numero="901")
         reservation = Reservation.objects.create(room=room)
         guest = ReservationGuest.objects.create(

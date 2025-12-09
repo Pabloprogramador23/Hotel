@@ -23,11 +23,7 @@ from apps.reservations import views as reservation_views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', reservation_views.dashboard, name='home'),
-    path('api/', include('apps.api.urls')),
     path('reservations/', include('apps.reservations.urls')),
-    path('rooms/', include('apps.rooms.urls')),
-    # Usando apenas uma versão do caminho para evitar conflitos
-    path('checkin_checkout/', include('apps.checkin_checkout.urls', namespace='checkin_checkout')),
     path('finance/', include(('apps.finance.urls', 'finance'), namespace='finance')),
     path('reports/', include('apps.reports.urls')),
     path('settings/', include('apps.settings_manager.urls')),

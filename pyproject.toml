@@ -14,8 +14,6 @@ dependencies = [
     "gunicorn>=21.2.0",          # Servidor WSGI para produção
     "python-dotenv>=1.0.0",      # Para gerenciar variáveis de ambiente
     "redis>=5.0.0",              # Para cache em produção
-    "djangorestframework>=3.15.0",  # API REST
-    "djangorestframework-simplejwt>=5.3.1",  # Autenticação JWT
 ]
 
 [build-system]
@@ -25,4 +23,5 @@ build-backend = "hatchling.build"
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "hotel_hms.settings"
 python_files = ["test_*.py", "*_test.py", "tests.py", "tests/*.py"]
+pythonpath = ["."]
 addopts = "-ra -q"

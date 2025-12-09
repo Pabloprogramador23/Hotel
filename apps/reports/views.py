@@ -5,7 +5,6 @@ from django.db.models import Count, Sum
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 
-from apps.checkin_checkout.models import CheckIn
 from apps.finance.models import Expense, ExtraIncome, LedgerAdjustment
 from apps.reservations.models import Reservation, ReservationGuest, Room
 
@@ -62,7 +61,7 @@ def occupancy_report(request: HttpRequest) -> HttpResponse:
     occupancy_trend = []
     
     for single_date in (start_date + timedelta(n) for n in range(7)):
-        checkins = CheckIn.objects.filter(started_at__date=single_date).count()
+        checkins = Reservation.objects.filter(data_entrada__date=single_date).count()
         occupancy_trend.append({
             'date': single_date,
             'checkins': checkins
@@ -117,8 +116,8 @@ def checkins_report(request: HttpRequest) -> HttpResponse:
     Returns:
         HttpResponse: Página com lista de check-ins.
     """
-    checkins = CheckIn.objects.select_related('reservation').order_by('-started_at')
-    
+    checkins = Reservation.objects.select_related('room').prefetch_related('hospedes').order_by('-data_entrada')
+
     context = {
         'checkins': checkins
     }

@@ -33,7 +33,7 @@
                     </div>
                 </div>
                 <div class="card-footer bg-transparent">
-                    <a href="{% url 'rooms:list' %}" class="text-decoration-none">
+                    <a href="{% url 'reservations:dashboard' %}" class="text-decoration-none">
                         Ver todos os quartos <i class="fas fa-arrow-right ms-1"></i>
                     </a>
                 </div>
@@ -154,7 +154,7 @@
                     </div>
                 </div>
                 <div class="card-footer bg-white text-center">
-                    <button class="btn btn-sm btn-outline-primary" id="viewAllReservations" onclick="window.location.href='{% url 'reservation-list' %}'">
+                    <button class="btn btn-sm btn-outline-primary" id="viewAllReservations" onclick="window.location.href='{% url 'dashboard' %}'">
                         Ver todas as reservas <i class="fas fa-arrow-right ms-1"></i>
                     </button>
                 </div>
@@ -178,7 +178,7 @@
                             </a>
                         </div>
                         <div class="col-6">
-                            <a href="{% url 'rooms:list' %}" class="btn btn-info d-flex flex-column align-items-center p-3 h-100 w-100">
+                            <a href="{% url 'reservations:dashboard' %}" class="btn btn-info d-flex flex-column align-items-center p-3 h-100 w-100">
                                 <i class="fas fa-bed fa-2x mb-2"></i>
                                 <span>Ver Quartos</span>
                             </a>

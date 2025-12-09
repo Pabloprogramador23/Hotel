@@ -1,4 +1,5 @@
-from decimal import Decimal
+from datetime import datetime
+from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -11,6 +12,162 @@ from django.views.decorators.http import require_POST
 from apps.reservations.models import Reservation, ReservationGuest
 
 from .models import Expense, ExtraIncome, LedgerAdjustment
+
+
+def _get_totals_by_period(start_date, end_date):
+    """Calcula totais de PIX, Dinheiro e Despesas em um período."""
+    pix = (
+        ReservationGuest.objects.filter(
+            pago=True,
+            metodo_pagamento=ReservationGuest.MetodoPagamento.PIX,
+            atualizado_em__date__gte=start_date,
+            atualizado_em__date__lte=end_date,
+        ).aggregate(total=Sum('valor_devido'))['total']
+        or Decimal('0')
+    )
+    
+    dinheiro = (
+        ReservationGuest.objects.filter(
+            pago=True,
+            metodo_pagamento=ReservationGuest.MetodoPagamento.DINHEIRO,
+            atualizado_em__date__gte=start_date,
+            atualizado_em__date__lte=end_date,
+        ).aggregate(total=Sum('valor_devido'))['total']
+        or Decimal('0')
+    )
+    
+    despesas = (
+        Expense.objects.filter(
+            payment_date__gte=start_date,
+            payment_date__lte=end_date,
+        ).aggregate(total=Sum('amount'))['total']
+        or Decimal('0')
+    )
+    
+    return pix, dinheiro, despesas
+
+
+@login_required
+def financeiro(request):
+    """Página principal do financeiro com totais do mês e filtro por período."""
+    today = timezone.localdate()
+    
+    # Primeiro e último dia do mês atual
+    primeiro_dia_mes = today.replace(day=1)
+    if today.month == 12:
+        ultimo_dia_mes = today.replace(year=today.year + 1, month=1, day=1)
+    else:
+        ultimo_dia_mes = today.replace(month=today.month + 1, day=1)
+    from datetime import timedelta
+    ultimo_dia_mes = ultimo_dia_mes - timedelta(days=1)
+    
+    # Totais do mês
+    pix_mes, dinheiro_mes, despesas_mes = _get_totals_by_period(primeiro_dia_mes, ultimo_dia_mes)
+    total_mes = pix_mes + dinheiro_mes
+    saldo_mes = total_mes - despesas_mes
+    
+    # Filtro por período (se aplicado)
+    data_inicio = request.GET.get('data_inicio')
+    data_fim = request.GET.get('data_fim')
+    filtro_aplicado = False
+    pix_periodo = dinheiro_periodo = despesas_periodo = saldo_periodo = Decimal('0')
+    recebimentos_periodo = []
+    despesas_periodo_lista = []
+    
+    if data_inicio and data_fim:
+        try:
+            data_inicio_parsed = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+            data_fim_parsed = datetime.strptime(data_fim, '%Y-%m-%d').date()
+            pix_periodo, dinheiro_periodo, despesas_periodo = _get_totals_by_period(
+                data_inicio_parsed, data_fim_parsed
+            )
+            saldo_periodo = pix_periodo + dinheiro_periodo - despesas_periodo
+            filtro_aplicado = True
+            data_inicio = data_inicio_parsed
+            data_fim = data_fim_parsed
+            
+            # Lista de recebimentos do período
+            recebimentos_periodo = ReservationGuest.objects.filter(
+                pago=True,
+                atualizado_em__date__gte=data_inicio_parsed,
+                atualizado_em__date__lte=data_fim_parsed,
+            ).select_related('reserva', 'reserva__room').order_by('-atualizado_em')
+            
+            # Lista de despesas do período
+            despesas_periodo_lista = Expense.objects.filter(
+                payment_date__gte=data_inicio_parsed,
+                payment_date__lte=data_fim_parsed,
+            ).order_by('-payment_date')
+        except ValueError:
+            pass
+    
+    # Lista de despesas recentes (apenas 5)
+    despesas_lista = Expense.objects.all().order_by('-payment_date', '-id')[:5]
+    
+    # Nome do mês
+    meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+             'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+    mes_atual = f"{meses[today.month - 1]} {today.year}"
+    
+    context = {
+        'mes_atual': mes_atual,
+        'pix_mes': pix_mes,
+        'dinheiro_mes': dinheiro_mes,
+        'total_mes': total_mes,
+        'despesas_mes': despesas_mes,
+        'saldo_mes': saldo_mes,
+        'filtro_aplicado': filtro_aplicado,
+        'data_inicio': data_inicio,
+        'data_fim': data_fim,
+        'pix_periodo': pix_periodo,
+        'dinheiro_periodo': dinheiro_periodo,
+        'despesas_periodo': despesas_periodo,
+        'saldo_periodo': saldo_periodo,
+        'recebimentos_periodo': recebimentos_periodo,
+        'despesas_periodo_lista': despesas_periodo_lista,
+        'despesas_lista': despesas_lista,
+        'hoje': today.strftime('%Y-%m-%d'),
+    }
+    
+    return render(request, 'finance/financeiro.html', context)
+
+
+@login_required
+@require_POST
+def adicionar_despesa(request):
+    """Adiciona uma despesa simples (valor e descrição)."""
+    descricao = request.POST.get('descricao', '').strip()
+    valor = request.POST.get('valor', '0')
+    data_despesa = request.POST.get('data_despesa') or timezone.localdate()
+    
+    if not descricao:
+        messages.error(request, 'Informe a descrição da despesa.')
+        return redirect('finance:financeiro')
+    
+    try:
+        valor_decimal = Decimal(valor)
+        if valor_decimal <= 0:
+            raise ValueError()
+    except (ValueError, InvalidOperation):
+        messages.error(request, 'Informe um valor válido.')
+        return redirect('finance:financeiro')
+    
+    if isinstance(data_despesa, str):
+        try:
+            data_despesa = datetime.strptime(data_despesa, '%Y-%m-%d').date()
+        except ValueError:
+            data_despesa = timezone.localdate()
+    
+    Expense.objects.create(
+        description=descricao,
+        amount=valor_decimal,
+        category='other',
+        payment_date=data_despesa,
+        payment_method='Geral',
+    )
+    
+    messages.success(request, f'Despesa "{descricao}" de R$ {valor_decimal:.2f} registrada!')
+    return redirect('finance:financeiro')
 
 
 def _reservation_totals(reservation: Reservation) -> dict:

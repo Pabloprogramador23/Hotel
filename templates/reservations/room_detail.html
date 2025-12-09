@@ -12,7 +12,16 @@
         <div class="flex flex-wrap gap-3">
             <a href="{% url 'reservations:dashboard' %}"
                 class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 hover:border-slate-900">Voltar</a>
-            {% if not reservation %}
+            {% if reservation %}
+            <form method="post" action="{% url 'reservations:checkout' reservation.id %}" 
+                  onsubmit="return confirm('Tem certeza que deseja fazer o check-out? O quarto será liberado.');">
+                {% csrf_token %}
+                <button type="submit" 
+                        class="inline-flex items-center gap-2 rounded-2xl bg-rose-600 px-5 py-3 text-sm font-semibold text-white shadow hover:bg-rose-700">
+                    Check-out
+                </button>
+            </form>
+            {% else %}
             <button type="button" class="js-open-checkin inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow hover:bg-slate-800"
                 data-room="{{ room.id }}">Check-in Rápido</button>
             {% endif %}

@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+
+{% block title %}Financeiro - Hotel HMS{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Cabeçalho -->
+    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+            <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Gestão Financeira</p>
+            <h1 class="text-3xl font-bold text-slate-900">Financeiro</h1>
+            <p class="mt-1 text-sm text-slate-500">Total do Mês: {{ mes_atual }}</p>
+        </div>
+        <div class="flex gap-3">
+            <a href="{% url 'reservations:dashboard' %}" 
+               class="inline-flex items-center gap-2 rounded-2xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:border-slate-900 transition">
+                ← Voltar
+            </a>
+            <button type="button" onclick="document.getElementById('despesaModal').classList.remove('hidden')"
+                    class="inline-flex items-center gap-2 rounded-2xl bg-rose-600 px-5 py-3 text-sm font-semibold text-white shadow hover:bg-rose-700 transition">
+                + Adicionar Despesa
+            </button>
+        </div>
+    </div>
+
+    <!-- Cards Totais do Mês -->
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <!-- PIX Mês -->
+        <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">PIX (Mês)</p>
+            <p class="mt-2 text-3xl font-bold text-emerald-600">R$ {{ pix_mes|floatformat:2 }}</p>
+        </div>
+
+        <!-- Dinheiro Mês -->
+        <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Dinheiro (Mês)</p>
+            <p class="mt-2 text-3xl font-bold text-blue-600">R$ {{ dinheiro_mes|floatformat:2 }}</p>
+        </div>
+
+        <!-- Total Recebido Mês -->
+        <div class="rounded-2xl bg-slate-900 p-6 shadow-sm">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Total Recebido (Mês)</p>
+            <p class="mt-2 text-3xl font-bold text-white">R$ {{ total_mes|floatformat:2 }}</p>
+        </div>
+    </div>
+
+    <!-- Cards Despesas e Saldo -->
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <!-- Despesas Mês -->
+        <div class="rounded-2xl border-l-4 border-rose-500 bg-white p-6 shadow-sm">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Despesas (Mês)</p>
+            <p class="mt-2 text-3xl font-bold text-rose-600">- R$ {{ despesas_mes|floatformat:2 }}</p>
+        </div>
+
+        <!-- Saldo Líquido -->
+        <div class="rounded-2xl border-l-4 {% if saldo_mes >= 0 %}border-emerald-500{% else %}border-rose-500{% endif %} bg-white p-6 shadow-sm">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Saldo Líquido (Mês)</p>
+            <p class="mt-2 text-3xl font-bold {% if saldo_mes >= 0 %}text-emerald-600{% else %}text-rose-600{% endif %}">R$ {{ saldo_mes|floatformat:2 }}</p>
+        </div>
+    </div>
+
+    <!-- Relatório por Período -->
+    <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+        <h2 class="text-lg font-semibold text-slate-900 mb-4">Relatório por Período</h2>
+        
+        <form method="get" action="" class="flex flex-col md:flex-row gap-4 items-end">
+            <div class="flex-1">
+                <label for="data_inicio" class="block text-sm font-medium text-slate-700 mb-1">Data Início</label>
+                <input type="date" id="data_inicio" name="data_inicio" 
+                       value="{{ data_inicio|date:'Y-m-d' }}"
+                       class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900">
+            </div>
+            <div class="flex-1">
+                <label for="data_fim" class="block text-sm font-medium text-slate-700 mb-1">Data Fim</label>
+                <input type="date" id="data_fim" name="data_fim"
+                       value="{{ data_fim|date:'Y-m-d' }}"
+                       class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900">
+            </div>
+            <button type="submit" 
+                    class="rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white shadow hover:bg-slate-800 transition">
+                Filtrar
+            </button>
+        </form>
+
+        {% if filtro_aplicado %}
+        <div class="mt-6 pt-6 border-t border-slate-100">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="rounded-xl bg-slate-50 p-4 text-center">
+                    <p class="text-xs text-slate-500 mb-1">PIX (Período)</p>
+                    <p class="text-lg font-bold text-emerald-600">R$ {{ pix_periodo|floatformat:2 }}</p>
+                </div>
+                <div class="rounded-xl bg-slate-50 p-4 text-center">
+                    <p class="text-xs text-slate-500 mb-1">Dinheiro (Período)</p>
+                    <p class="text-lg font-bold text-blue-600">R$ {{ dinheiro_periodo|floatformat:2 }}</p>
+                </div>
+                <div class="rounded-xl bg-slate-50 p-4 text-center">
+                    <p class="text-xs text-slate-500 mb-1">Despesas (Período)</p>
+                    <p class="text-lg font-bold text-rose-600">- R$ {{ despesas_periodo|floatformat:2 }}</p>
+                </div>
+                <div class="rounded-xl bg-slate-900 p-4 text-center">
+                    <p class="text-xs text-slate-400 mb-1">Saldo (Período)</p>
+                    <p class="text-lg font-bold text-white">R$ {{ saldo_periodo|floatformat:2 }}</p>
+                </div>
+            </div>
+            
+            <!-- Detalhamento do Período -->
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Recebimentos do Período -->
+                <div class="rounded-xl border border-slate-200 overflow-hidden">
+                    <div class="bg-emerald-50 px-4 py-3 border-b border-slate-200">
+                        <h3 class="font-semibold text-emerald-800">💰 Recebimentos do Período</h3>
+                    </div>
+                    {% if recebimentos_periodo %}
+                    <div class="divide-y divide-slate-100 max-h-64 overflow-y-auto">
+                        {% for recebimento in recebimentos_periodo %}
+                        <div class="px-4 py-3 flex justify-between items-center">
+                            <div>
+                                <p class="font-medium text-slate-900 text-sm">{{ recebimento.nome }}</p>
+                                <p class="text-xs text-slate-500">Quarto {{ recebimento.reserva.room.numero }} • {{ recebimento.atualizado_em|date:"d/m/Y" }}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold {% if recebimento.metodo_pagamento == 'PIX' %}text-emerald-600{% else %}text-blue-600{% endif %}">R$ {{ recebimento.valor_devido|floatformat:2 }}</p>
+                                <p class="text-xs text-slate-400">{{ recebimento.metodo_pagamento }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="px-4 py-8 text-center text-slate-500 text-sm">
+                        Nenhum recebimento no período
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Despesas do Período -->
+                <div class="rounded-xl border border-slate-200 overflow-hidden">
+                    <div class="bg-rose-50 px-4 py-3 border-b border-slate-200">
+                        <h3 class="font-semibold text-rose-800">📉 Despesas do Período</h3>
+                    </div>
+                    {% if despesas_periodo_lista %}
+                    <div class="divide-y divide-slate-100 max-h-64 overflow-y-auto">
+                        {% for despesa in despesas_periodo_lista %}
+                        <div class="px-4 py-3 flex justify-between items-center">
+                            <div>
+                                <p class="font-medium text-slate-900 text-sm">{{ despesa.description }}</p>
+                                <p class="text-xs text-slate-500">{{ despesa.payment_date|date:"d/m/Y" }}</p>
+                            </div>
+                            <p class="font-bold text-rose-600">- R$ {{ despesa.amount|floatformat:2 }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="px-4 py-8 text-center text-slate-500 text-sm">
+                        Nenhuma despesa no período
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Lista de Despesas Recentes -->
+    <div class="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100">
+            <h2 class="text-lg font-semibold text-slate-900">Despesas Recentes</h2>
+        </div>
+        
+        {% if despesas_lista %}
+        <div class="divide-y divide-slate-100">
+            {% for despesa in despesas_lista %}
+            <div class="flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition">
+                <div>
+                    <p class="font-medium text-slate-900">{{ despesa.description }}</p>
+                    <p class="text-sm text-slate-500">{{ despesa.payment_date|date:"d/m/Y" }}</p>
+                </div>
+                <span class="text-lg font-bold text-rose-600">- R$ {{ despesa.amount|floatformat:2 }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="px-6 py-12 text-center">
+            <p class="text-slate-500">Nenhuma despesa registrada</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal Adicionar Despesa -->
+<div id="despesaModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex min-h-screen items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/50 transition-opacity" onclick="document.getElementById('despesaModal').classList.add('hidden')"></div>
+        
+        <div class="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <div class="mb-6">
+                <h3 class="text-xl font-bold text-slate-900">Adicionar Despesa</h3>
+                <p class="text-sm text-slate-500">Registre uma nova despesa</p>
+            </div>
+            
+            <form method="post" action="{% url 'finance:adicionar_despesa' %}">
+                {% csrf_token %}
+                
+                <div class="space-y-4">
+                    <div>
+                        <label for="descricao" class="block text-sm font-medium text-slate-700 mb-1">Descrição *</label>
+                        <input type="text" id="descricao" name="descricao" required
+                               placeholder="Ex: Conta de luz, Compra de materiais..."
+                               class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900">
+                    </div>
+                    
+                    <div>
+                        <label for="valor" class="block text-sm font-medium text-slate-700 mb-1">Valor (R$) *</label>
+                        <input type="number" step="0.01" min="0.01" id="valor" name="valor" required
+                               placeholder="0,00"
+                               class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900">
+                    </div>
+                    
+                    <div>
+                        <label for="data_despesa" class="block text-sm font-medium text-slate-700 mb-1">Data</label>
+                        <input type="date" id="data_despesa" name="data_despesa" value="{{ hoje }}"
+                               class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900">
+                    </div>
+                </div>
+                
+                <div class="mt-6 flex gap-3">
+                    <button type="button" onclick="document.getElementById('despesaModal').classList.add('hidden')"
+                            class="flex-1 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                            class="flex-1 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-rose-700 transition">
+                        Salvar Despesa
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

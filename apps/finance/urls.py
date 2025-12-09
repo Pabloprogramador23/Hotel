@@ -3,6 +3,9 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path('', views.financeiro, name='financeiro'),
+    path('adicionar-despesa/', views.adicionar_despesa, name='adicionar_despesa'),
+    
     path('cash-overview/', views.cash_overview, name='cash_overview'),
     path('reservation-balances/', views.reservation_balances, name='reservation_balances'),
     path('adjustments/', views.list_adjustments, name='list_adjustments'),
