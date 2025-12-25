@@ -40,7 +40,9 @@ Caddyfile
 secrets.json
 db.sqlite3
 hotel_media/
+!hotel_media/screenshots/
 .env
+!/.env.example
 settings_local.py
 settings_dev.py
 settings_test.py
